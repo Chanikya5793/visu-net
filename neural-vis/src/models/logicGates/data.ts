@@ -5,7 +5,7 @@ interface TrainingData {
     output: number[];
 }
 
-function mapGateType(type: string): number[] {
+export function mapGateType(type: string): number[] {
     switch (type.toUpperCase()) {
         case 'AND':
             return [1, 0, 0, 0, 0];
@@ -17,7 +17,6 @@ function mapGateType(type: string): number[] {
             return [0, 0, 0, 1, 0];
         case 'NOR':
             return [0, 0, 0, 0, 1];
-        // Add more gate types as needed
         default:
             return [0, 0, 0, 0, 0];
     }

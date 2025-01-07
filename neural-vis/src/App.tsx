@@ -1,31 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { 
-  Button, 
-  Container, 
-  Typography, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
-  SelectChangeEvent,
-  Box,
-  Slider,
-  LinearProgress
-} from '@mui/material';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
-} from 'recharts';
+import { Container, Typography, SelectChangeEvent } from '@mui/material';
+import { DatasetSelector } from './components/DatasetSelector';
+import { TrainingControls } from './components/TrainingControls';
+import { TrainingMetrics } from './components/TrainingMetrics';
+import { TestingInterface } from './components/TestingInterface';
+import { MetricsGraph } from './components/MetricsGraph';
 import { LogicGateTrainer } from './models/logicGates/train';
 import { FitnessTrainer } from './models/fitnessClassification/train';
 import { WeatherTrainer } from './models/weatherPrediction/train';
+import { mapGateType } from './models/logicGates/data';
+import { mapHeartRate, mapBMI, mapStamina } from './models/fitnessClassification/data';
 import './App.css';
+import { TestModelButton } from './components/TestModelButton';
 
 interface MetricPoint {
   epoch: number;
@@ -34,397 +20,200 @@ interface MetricPoint {
 }
 
 function App() {
+  // Essential state
   const [dataset, setDataset] = useState<string>('');
   const [epochs, setEpochs] = useState<number>(1000);
-  const [error, setError] = useState<number>(0);
-  const [iteration, setIteration] = useState<number>(0);
   const [isTraining, setIsTraining] = useState<boolean>(false);
-  const trainerRef = useRef<LogicGateTrainer | FitnessTrainer | WeatherTrainer | null>(null);
-  const [accuracy, setAccuracy] = useState<number>(0);
-  const [loss, setLoss] = useState<number>(0);
-  const [metricsHistory, setMetricsHistory] = useState<MetricPoint[]>([]);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [trainingProgress, setTrainingProgress] = useState<{
-    currentEpoch: number;
-    totalEpochs: number;
-    lastError: number;
-    isPaused: boolean;
-    isTraining: boolean;
-  }>({
-    currentEpoch: 0,
-    totalEpochs: 0,
-    lastError: 1,
-    isPaused: false,
-    isTraining: false
-  });
+  const [iteration, setIteration] = useState<number>(0);
+  const [loss, setLoss] = useState<number>(0);
+  const [accuracy, setAccuracy] = useState<number>(0);
+  const [metricsHistory, setMetricsHistory] = useState<MetricPoint[]>([]);
+  const [testInputs, setTestInputs] = useState<Record<string, any>>({});
+  const [prediction, setPrediction] = useState<number[]>([]);
+  const [trainingCompleted, setTrainingCompleted] = useState<boolean>(false);
+  const [showTestingInterface, setShowTestingInterface] = useState<boolean>(false);
 
+  const trainerRef = useRef<LogicGateTrainer | FitnessTrainer | WeatherTrainer | null>(null);
+
+  // Handlers
   const handleChange = (event: SelectChangeEvent<string>) => {
     setDataset(event.target.value as string);
-    // You can add additional logic here based on the selected dataset
-    console.log(`Selected Dataset: ${event.target.value}`);
   };
 
   const handleEpochChange = (_event: Event, newValue: number | number[]) => {
     setEpochs(newValue as number);
   };
 
+  // Training handlers
   const handleStartTraining = async () => {
-    if (!dataset || isTraining) return; // Prevent multiple trainings
+    if (!dataset || isTraining) return;
     
-    // Create new trainer instance
-    switch(dataset) {
-      case 'logicGates':
-        trainerRef.current = new LogicGateTrainer();
-        break;
-      case 'fitnessClassification':
-        trainerRef.current = new FitnessTrainer();
-        break;
-      case 'weatherPrediction':
-        trainerRef.current = new WeatherTrainer();
-        break;
-      default:
-        console.error('Unknown dataset selected');
-        return;
-    }
+    trainerRef.current = createTrainer(dataset);
+    if (!trainerRef.current) return;
 
+    resetTrainingState();
+    await startTraining();
+  };
+
+  // Helper functions
+  const createTrainer = (selectedDataset: string) => {
+    switch(selectedDataset) {
+      case 'logicGates': return new LogicGateTrainer();
+      case 'fitnessClassification': return new FitnessTrainer();
+      case 'weatherPrediction': return new WeatherTrainer();
+      default: return null;
+    }
+  };
+
+  const resetTrainingState = () => {
     setIsTraining(true);
     setIsPaused(false);
     setIteration(0);
-    setError(0);
-    setAccuracy(0);
     setLoss(1);
+    setAccuracy(0);
     setMetricsHistory([]);
-    setTrainingProgress({
-      currentEpoch: 0,
-      totalEpochs: epochs,
-      lastError: 1,
-      isPaused: false,
-      isTraining: true
-    });
+    setTrainingCompleted(false); // Reset completion state
+  };
 
+  const startTraining = async () => {
     await trainerRef.current?.train({
       epochs,
-      onIteration: (iter, err) => {
-        setIteration(iter);
-        setError(err);
-        setLoss(err);
-        const accuracy = 1 - err;
-        setAccuracy(accuracy);
-        
-        // Add metrics to history
-        setMetricsHistory(prev => [...prev, {
-          epoch: iter,
-          loss: err,
-          accuracy: accuracy
-        }]);
-      },
-      onComplete: () => {
-        setIsTraining(false);
-        setIsPaused(false);
-        const progress = trainerRef.current?.getProgress();
-        if (progress) {
-          setTrainingProgress(progress);
-        }
-      },
-      onPause: () => {
-        setIsPaused(true);
-        setIsTraining(false);
-        const progress = trainerRef.current?.getProgress();
-        if (progress) {
-          setTrainingProgress(progress);
-        }
-      },
-      onStop: (reason) => {
-        setIsTraining(false);
-        setIsPaused(false);
-        console.log(reason || 'Training stopped');
-        // Show a UI notification, etc.
-      }
+      onIteration: handleIteration,
+      onComplete: handleComplete,
+      onPause: handlePause,
+      onStop: handleStop
     });
+  };
+
+  // Event handlers
+  const handleIteration = (iter: number, err: number) => {
+    setIteration(iter);
+    setLoss(err);
+    setAccuracy(1 - err);
+    setMetricsHistory(prev => [...prev, { epoch: iter, loss: err, accuracy: 1 - err }]);
+  };
+
+  const handleComplete = () => {
+    setIsTraining(false);
+    setIsPaused(false);
+    setTrainingCompleted(true); // Set to true only when training completes normally
   };
 
   const handlePause = () => {
-    if (trainerRef.current) {
-      trainerRef.current.pause();
-      setIsPaused(true);
-      // Get latest progress
-      const progress = trainerRef.current.getProgress();
-      setTrainingProgress(progress);
-    }
-  };
-
-  const handleContinue = () => {
-    if (!trainerRef.current) return;
-    
-    setIsPaused(false);
-    setIsTraining(true);
-    
-    trainerRef.current.continue({
-      epochs,
-      onIteration: (iter, err) => {
-        setIteration(iter);
-        setError(err);
-        setLoss(err);
-        const accuracy = 1 - err;
-        setAccuracy(accuracy);
-        
-        setMetricsHistory(prev => [...prev, {
-          epoch: iter,
-          loss: err,
-          accuracy
-        }]);
-      },
-      onComplete: () => {
-        setIsTraining(false);
-        setIsPaused(false);
-        const progress = trainerRef.current?.getProgress();
-        if (progress) {
-          setTrainingProgress(progress);
-        }
-      },
-      onPause: () => {
-        setIsPaused(true);
-        setIsTraining(false);
-        const progress = trainerRef.current?.getProgress();
-        if (progress) {
-          setTrainingProgress(progress);
-        }
-      }
-    });
+    setIsPaused(true);
+    setIsTraining(false);
   };
 
   const handleStop = () => {
     trainerRef.current?.stop();
     setIsTraining(false);
     setIsPaused(false);
+    setTrainingCompleted(false); // Set to false when training is stopped
   };
 
   const handleReset = () => {
     trainerRef.current?.reset();
-    setIteration(0);
-    setError(0);
-    setMetricsHistory([]); // Clear metrics history
-    setLoss(0);
-    setAccuracy(0);
+    resetTrainingState();
+    setTestInputs({});
+    setPrediction([]);
+    setTrainingCompleted(false); // Reset when training is reset
+  };
+
+  const handleTest = () => {
+    if (!trainerRef.current) return;
+    const input = prepareTestInput();
+    const result = trainerRef.current.predict(input);
+    setPrediction(Array.isArray(result) ? result : [result]);
+  };
+
+  const prepareTestInput = () => {
+    switch(dataset) {
+      case 'logicGates':
+        return [
+          testInputs.input1 || 0,
+          testInputs.input2 || 0,
+          ...mapGateType(testInputs.gateType || 'AND')
+        ];
+      case 'weatherPrediction':
+        return [
+          (testInputs.temperature || 0) / 50,
+          (testInputs.humidity || 0) / 100,
+          (testInputs.cloudCover || 0) / 100
+        ];
+      case 'fitnessClassification':
+        return [
+          mapHeartRate(testInputs.heartRate?.toString() || '60-75'),
+          mapBMI(testInputs.bmi || 'Normal'),
+          mapStamina(testInputs.stamina || 'Medium')
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const handleResetTest = () => {
+    setTestInputs({});
+    setPrediction([]);
+    setShowTestingInterface(false); // Hide testing interface on reset
+  };
+
+  const handleEnableTesting = () => {
+    setShowTestingInterface(true);
   };
 
   return (
     <Container className="App">
-      <Typography variant="h4" gutterBottom>
-        Neural Network Visualization
-      </Typography>
-      <Typography variant="body1" gutterBottom>
-        See how Neural Networks are trained in real time.
-      </Typography>
+      <Typography variant="h4" gutterBottom>Neural Network Visualization</Typography>
       
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 2
-      }}>
-        <Typography variant="body1" sx={{ mb: 1 }}>
-          Please select a dataset to continue
-        </Typography>
-        <FormControl sx={{ minWidth: 200, maxWidth: 300 }}>
-          <InputLabel id="dataset-select-label">Select Your Dataset</InputLabel>
-          <Select
-            labelId="dataset-select-label"
-            id="dataset-select"
-            value={dataset}
-            onChange={handleChange}
-            label="Select Your Dataset"
-            sx={{
-              borderRadius: 2,
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderRadius: 2,
-              }
-            }}
-          >
-            <MenuItem value="">
-              <em>None</em>
-            </MenuItem>
-            <MenuItem value="logicGates">Logic Gates Truth Tables</MenuItem>
-            <MenuItem value="fitnessClassification">Fitness Classification</MenuItem>
-            <MenuItem value="weatherPrediction">Weather Prediction</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Optionally, you can conditionally render content based on the selected dataset */}
+      <DatasetSelector dataset={dataset} onChange={handleChange} />
+      
       {dataset && (
-        <Typography variant="body2" color="textSecondary" style={{ marginTop: '1rem' }}>
-          You have selected: <strong>{dataset.replace(/([A-Z])/g, ' $1').trim()}</strong>
-        </Typography>
-      )}
-
-      {dataset && (
-        <Box sx={{ mt: 4 }}>
-          <Typography gutterBottom>Number of Epochs</Typography>
-          <Slider
-            value={epochs}
-            onChange={handleEpochChange}
-            min={100}
-            max={5000}
-            step={100}
-            valueLabelDisplay="auto"
-            disabled={isTraining}
+        <>
+          <TrainingControls 
+            epochs={epochs}
+            isTraining={isTraining}
+            isPaused={isPaused}
+            onEpochChange={handleEpochChange}
+            onStart={handleStartTraining}
+            onPause={handlePause}
+            onContinue={startTraining}
+            onStop={handleStop}
+            onReset={handleReset}
           />
           
-          <Box sx={{ mt: 2 }}>
-            <Button 
-              variant="contained" 
-              onClick={handleStartTraining}
-              disabled={isTraining || isPaused}
-              sx={{ mr: 1 }}
-            >
-              Start Training
-            </Button>
-            {!isPaused ? (
-              <Button 
-                variant="outlined" 
-                onClick={handlePause}
-                disabled={!isTraining}
-                sx={{ mr: 1 }}
-              >
-                Pause
-              </Button>
-            ) : (
-              <Button 
-                variant="outlined" 
-                onClick={handleContinue}
-                sx={{ mr: 1 }}
-              >
-                Continue
-              </Button>
-            )}
-            <Button 
-              variant="outlined" 
-              onClick={handleStop}
-              disabled={!isTraining && !isPaused}
-              sx={{ mr: 1 }}
-            >
-              Stop
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={handleReset}
-              disabled={isTraining || isPaused}
-            >
-              Reset
-            </Button>
-          </Box>
-
-          {isTraining && (
-            <Box sx={{ mt: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-              <Typography variant="h6" gutterBottom>Training Progress</Typography>
-              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
-                <Box>
-                  <Typography color="textSecondary">Current Epoch</Typography>
-                  <Typography variant="h6">{iteration}/{epochs}</Typography>
-                </Box>
-                <Box>
-                  <Typography color="textSecondary">Progress</Typography>
-                  <Typography variant="h6">{((iteration/epochs) * 100).toFixed(1)}%</Typography>
-                </Box>
-                <Box>
-                  <Typography color="textSecondary">Loss</Typography>
-                  <Typography variant="h6">{loss.toFixed(6)}</Typography>
-                </Box>
-                <Box>
-                  <Typography color="textSecondary">Accuracy</Typography>
-                  <Typography variant="h6">{(accuracy * 100).toFixed(2)}%</Typography>
-                </Box>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={(iteration/epochs) * 100} 
-                sx={{ mt: 2 }}
-              />
-            </Box>
-          )}
-
+          <TrainingMetrics 
+            iteration={iteration}
+            epochs={epochs}
+            loss={loss}
+            accuracy={accuracy}
+            isTraining={isTraining}
+          />
+          
+          <MetricsGraph metricsHistory={metricsHistory} />
+          
           {!isTraining && iteration > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography color="success.main" variant="h6">
-                Training Complete!
-              </Typography>
-              <Typography>
-                Final Loss: {loss.toFixed(6)}
-              </Typography>
-              <Typography>
-                Final Accuracy: {(accuracy * 100).toFixed(2)}%
-              </Typography>
-            </Box>
+            <>
+              <TestModelButton 
+                trainingCompleted={trainingCompleted}
+                isTestingEnabled={showTestingInterface}
+                onEnableTesting={handleEnableTesting}
+              />
+              
+              {showTestingInterface && (
+                <TestingInterface 
+                  dataset={dataset}
+                  testInputs={testInputs}
+                  prediction={prediction}
+                  onTestInputChange={(key, value) => 
+                    setTestInputs(prev => ({ ...prev, [key]: value }))}
+                  onTest={handleTest}
+                  onReset={handleResetTest}
+                />
+              )}
+            </>
           )}
-        </Box>
-      )}
-
-      {dataset && (
-        <Box sx={{ mt: 4, height: 400 }}>
-          <Typography variant="h6" gutterBottom>
-            Training Metrics
-          </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-            {/* Loss Graph */}
-            <Box sx={{ height: 300, width: '100%' }}>
-              <ResponsiveContainer>
-                <LineChart
-                  data={metricsHistory}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="epoch" 
-                    label={{ value: 'Epochs', position: 'bottom' }} 
-                  />
-                  <YAxis 
-                    label={{ value: 'Loss', angle: -90, position: 'insideLeft' }}
-                  />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="loss" 
-                    stroke="#8884d8" 
-                    name="Loss"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </Box>
-
-            {/* Accuracy Graph */}
-            <Box sx={{ height: 300, width: '100%' }}>
-              <ResponsiveContainer>
-                <LineChart
-                  data={metricsHistory}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="epoch" 
-                    label={{ value: 'Epochs', position: 'bottom' }} 
-                  />
-                  <YAxis 
-                    label={{ value: 'Accuracy', angle: -90, position: 'insideLeft' }}
-                    domain={[0, 1]}
-                    tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-                  />
-                  <Tooltip 
-                    formatter={(value) => `${(Number(value) * 100).toFixed(2)}%`}
-                  />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="accuracy" 
-                    stroke="#82ca9d" 
-                    name="Accuracy"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </Box>
-          </Box>
-        </Box>
+        </>
       )}
     </Container>
   );

@@ -14,7 +14,7 @@ interface TrainingData {
 }
 
 // Helper functions to map categorical data to numerical values
-function mapHeartRate(hr: string): number {
+export function mapHeartRate(hr: string): number {
   // Convert range to average
   const range = hr.split('-');
   if (range.length === 2) {
@@ -28,7 +28,7 @@ function mapHeartRate(hr: string): number {
   }
 }
 
-function mapStamina(stamina: string): number {
+export function mapStamina(stamina: string): number {
   switch (stamina.toLowerCase()) {
     case 'high':
       return 1;
@@ -41,7 +41,7 @@ function mapStamina(stamina: string): number {
   }
 }
 
-function mapBMI(bmi: string): number {
+export function mapBMI(bmi: string): number {
   switch (bmi.toLowerCase()) {
     case 'underweight':
       return -1;

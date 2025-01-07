@@ -1,0 +1,19 @@
+    # Proxy Neural Visualization app
+    # Proxy local server on localhost:3000
+    location /neural-vis/ {
+        # If Nginx is running on the same machine as the app:
+        #proxy_pass http://127.0.0.1:3000/;
+        
+        # If Nginx is running in Docker on a Mac, use host.docker.internal:
+        proxy_pass http://host.docker.internal:3000/;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (if needed)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }

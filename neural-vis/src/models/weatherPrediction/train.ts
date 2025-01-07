@@ -46,7 +46,7 @@ export class WeatherTrainer {
         errorThresh: 0.0000000001,    // Practically zero
         log: true,
         logPeriod: 1,
-        learningRate: 0.01, // Add learning rate to control training speed
+        //learningRate: 0.01, // Add learning rate to control training speed
         timeout: Infinity, // Prevent timeout
         callback: (stats: { iterations: number, error: number }) => {
           if (this.isPaused) {
