@@ -6,11 +6,8 @@ declare module 'brain.js' {
     errorThresh?: number;
     log?: boolean;
     logPeriod?: number;
-  }
-
-  export interface ITrainingData {
-    input: number[];
-    output: number[];
+    learningRate?: number;
+    timeout?: number;
   }
 
   export interface ITrainingStatus {
@@ -18,10 +15,16 @@ declare module 'brain.js' {
     error: number;
   }
 
+  export interface ITrainingOptions extends INeuralNetworkOptions {
+    callback?: (status: ITrainingStatus) => boolean;
+  }
+
   export class NeuralNetwork {
     constructor(options?: INeuralNetworkOptions);
-    train(data: ITrainingData[], options?: INeuralNetworkOptions): void;
-    trainAsync(data: ITrainingData[], options?: INeuralNetworkOptions): Promise<void>;
+    train(data: any[], options?: ITrainingOptions): void;
+    trainAsync(data: any[], options?: ITrainingOptions): Promise<void>;
     run(input: number[]): number[];
+    toJSON(): any;
+    fromJSON(json: any): void;
   }
 }

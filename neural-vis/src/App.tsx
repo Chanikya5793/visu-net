@@ -43,6 +43,20 @@ function App() {
   const [accuracy, setAccuracy] = useState<number>(0);
   const [loss, setLoss] = useState<number>(0);
   const [metricsHistory, setMetricsHistory] = useState<MetricPoint[]>([]);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [trainingProgress, setTrainingProgress] = useState<{
+    currentEpoch: number;
+    totalEpochs: number;
+    lastError: number;
+    isPaused: boolean;
+    isTraining: boolean;
+  }>({
+    currentEpoch: 0,
+    totalEpochs: 0,
+    lastError: 1,
+    isPaused: false,
+    isTraining: false
+  });
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     setDataset(event.target.value as string);
@@ -55,7 +69,7 @@ function App() {
   };
 
   const handleStartTraining = async () => {
-    if (!dataset) return;
+    if (!dataset || isTraining) return; // Prevent multiple trainings
     
     // Create new trainer instance
     switch(dataset) {
@@ -68,13 +82,25 @@ function App() {
       case 'weatherPrediction':
         trainerRef.current = new WeatherTrainer();
         break;
+      default:
+        console.error('Unknown dataset selected');
+        return;
     }
 
     setIsTraining(true);
+    setIsPaused(false);
     setIteration(0);
     setError(0);
     setAccuracy(0);
     setLoss(1);
+    setMetricsHistory([]);
+    setTrainingProgress({
+      currentEpoch: 0,
+      totalEpochs: epochs,
+      lastError: 1,
+      isPaused: false,
+      isTraining: true
+    });
 
     await trainerRef.current?.train({
       epochs,
@@ -94,13 +120,83 @@ function App() {
       },
       onComplete: () => {
         setIsTraining(false);
+        setIsPaused(false);
+        const progress = trainerRef.current?.getProgress();
+        if (progress) {
+          setTrainingProgress(progress);
+        }
+      },
+      onPause: () => {
+        setIsPaused(true);
+        setIsTraining(false);
+        const progress = trainerRef.current?.getProgress();
+        if (progress) {
+          setTrainingProgress(progress);
+        }
+      },
+      onStop: (reason) => {
+        setIsTraining(false);
+        setIsPaused(false);
+        console.log(reason || 'Training stopped');
+        // Show a UI notification, etc.
       }
     });
   };
 
   const handlePause = () => {
-    trainerRef.current?.pause();
+    if (trainerRef.current) {
+      trainerRef.current.pause();
+      setIsPaused(true);
+      // Get latest progress
+      const progress = trainerRef.current.getProgress();
+      setTrainingProgress(progress);
+    }
+  };
+
+  const handleContinue = () => {
+    if (!trainerRef.current) return;
+    
+    setIsPaused(false);
+    setIsTraining(true);
+    
+    trainerRef.current.continue({
+      epochs,
+      onIteration: (iter, err) => {
+        setIteration(iter);
+        setError(err);
+        setLoss(err);
+        const accuracy = 1 - err;
+        setAccuracy(accuracy);
+        
+        setMetricsHistory(prev => [...prev, {
+          epoch: iter,
+          loss: err,
+          accuracy
+        }]);
+      },
+      onComplete: () => {
+        setIsTraining(false);
+        setIsPaused(false);
+        const progress = trainerRef.current?.getProgress();
+        if (progress) {
+          setTrainingProgress(progress);
+        }
+      },
+      onPause: () => {
+        setIsPaused(true);
+        setIsTraining(false);
+        const progress = trainerRef.current?.getProgress();
+        if (progress) {
+          setTrainingProgress(progress);
+        }
+      }
+    });
+  };
+
+  const handleStop = () => {
+    trainerRef.current?.stop();
     setIsTraining(false);
+    setIsPaused(false);
   };
 
   const handleReset = () => {
@@ -179,23 +275,41 @@ function App() {
             <Button 
               variant="contained" 
               onClick={handleStartTraining}
-              disabled={isTraining}
+              disabled={isTraining || isPaused}
               sx={{ mr: 1 }}
             >
               Start Training
             </Button>
+            {!isPaused ? (
+              <Button 
+                variant="outlined" 
+                onClick={handlePause}
+                disabled={!isTraining}
+                sx={{ mr: 1 }}
+              >
+                Pause
+              </Button>
+            ) : (
+              <Button 
+                variant="outlined" 
+                onClick={handleContinue}
+                sx={{ mr: 1 }}
+              >
+                Continue
+              </Button>
+            )}
             <Button 
               variant="outlined" 
-              onClick={handlePause}
-              disabled={!isTraining}
+              onClick={handleStop}
+              disabled={!isTraining && !isPaused}
               sx={{ mr: 1 }}
             >
-              Pause
+              Stop
             </Button>
             <Button 
               variant="outlined" 
               onClick={handleReset}
-              disabled={isTraining}
+              disabled={isTraining || isPaused}
             >
               Reset
             </Button>
