@@ -29,7 +29,9 @@ export class WeatherTrainer {
       logPeriod: 1,
       callback: (stats: { iterations: number, error: number }) => {
         if (!this.isTraining) return true;
-        options.onIteration?.(stats.iterations, stats.error);
+        requestAnimationFrame(() => {
+          options.onIteration?.(stats.iterations, stats.error);
+        });
       }
     };
 

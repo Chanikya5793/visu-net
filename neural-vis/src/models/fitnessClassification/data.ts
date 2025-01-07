@@ -1,29 +1,84 @@
-export interface FitnessData {
-  age: number;
-  weight: number;
-  height: number;
-  activity: number; // 1-5 scale
+import fitnessClassificationJson from './fitnessClassification.json';
+
+interface FitnessData {
+  "Heart Rate (bpm)": string;
+  "Stamina Level": string;
+  "BMI": string;
+  "Fitness Classification": string;
+  "": string; // Consider removing if not needed
 }
 
-// Normalize data to 0-1 range
-export function normalizeData(data: FitnessData) {
-  return {
-    input: [
-      data.age / 100, // Assuming max age 100
-      data.weight / 200, // Assuming max weight 200kg
-      data.height / 250, // Assuming max height 250cm
-      data.activity / 5  // Activity is 1-5 scale
-    ],
-    output: [0] // Will be set based on classification
-  };
+interface TrainingData {
+  input: number[];
+  output: number[];
 }
 
-// Sample training data
+// Helper functions to map categorical data to numerical values
+function mapHeartRate(hr: string): number {
+  // Convert range to average
+  const range = hr.split('-');
+  if (range.length === 2) {
+    const min = parseInt(range[0], 10);
+    const max = parseInt(range[1], 10);
+    return ((min + max) / 2) / 200; // Normalized (adjust denominator as needed)
+  } else {
+    // Handle cases like '131+'
+    const value = parseInt(hr.replace('+', ''), 10);
+    return value / 200; // Normalize based on expected max
+  }
+}
+
+function mapStamina(stamina: string): number {
+  switch (stamina.toLowerCase()) {
+    case 'high':
+      return 1;
+    case 'medium':
+      return 0.5;
+    case 'low':
+      return 0;
+    default:
+      return 0;
+  }
+}
+
+function mapBMI(bmi: string): number {
+  switch (bmi.toLowerCase()) {
+    case 'underweight':
+      return -1;
+    case 'normal':
+      return 0;
+    case 'overweight':
+      return 1;
+    case 'obese':
+      return 2;
+    default:
+      return 0;
+  }
+}
+
+function mapClassification(classification: string): number[] {
+  switch (classification.toLowerCase()) {
+    case 'fit':
+      return [1];
+    case 'average':
+      return [0.5];
+    case 'unfit':
+      return [0];
+    default:
+      return [0];
+  }
+}
+
 export const fitnessData = {
-  training: [
-    // Add your fitness data here from text document
-    // Example:
-    { input: [0.25, 0.35, 0.68, 0.8], output: [1] }, // Fit
-    { input: [0.45, 0.85, 0.65, 0.2], output: [0] }  // Unfit
-  ]
+  training: fitnessClassificationJson.map((entry: FitnessData) => {
+    const heartRate = mapHeartRate(entry["Heart Rate (bpm)"]);
+    const stamina = mapStamina(entry["Stamina Level"]);
+    const bmi = mapBMI(entry["BMI"]);
+    const classification = mapClassification(entry["Fitness Classification"]);
+
+    return {
+      input: [heartRate, bmi, stamina],
+      output: classification
+    };
+  })
 };

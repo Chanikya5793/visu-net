@@ -5,6 +5,7 @@ interface TrainingOptions {
   epochs: number;
   onIteration?: (iteration: number, error: number) => void;
   onComplete?: () => void;
+  onPause?: () => void;
 }
 
 export class FitnessTrainer {
@@ -28,7 +29,9 @@ export class FitnessTrainer {
       logPeriod: 1,
       callback: (stats: { iterations: number, error: number }) => {
         if (!this.isTraining) return true;
-        options.onIteration?.(stats.iterations, stats.error);
+        requestAnimationFrame(() => {
+          options.onIteration?.(stats.iterations, stats.error);
+        });
       }
     };
 

@@ -1,5 +1,5 @@
 import * as brain from 'brain.js';
-import { andGateData } from './data';
+import { logicGateData } from './data';
 
 interface TrainingOptions {
   epochs: number;
@@ -29,12 +29,14 @@ export class LogicGateTrainer {
       logPeriod: 1,
       callback: (stats: { iterations: number, error: number }) => {
         if (!this.isTraining) return true; // Stop training if paused
-        options.onIteration?.(stats.iterations, stats.error);
+        requestAnimationFrame(() => {
+          options.onIteration?.(stats.iterations, stats.error);
+        });
       }
     };
 
     try {
-      await this.network.trainAsync(andGateData.training, trainingConfig);
+      await this.network.trainAsync(logicGateData.training, trainingConfig);
       options.onComplete?.();
     } catch (error) {
       console.error('Training error:', error);
@@ -43,7 +45,6 @@ export class LogicGateTrainer {
 
   pause() {
     this.isTraining = false;
-    // Remove this.onPause?.(); as it's not defined
   }
 
   reset() {

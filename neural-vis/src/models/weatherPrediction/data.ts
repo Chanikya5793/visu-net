@@ -1,29 +1,27 @@
-export interface WeatherData {
-  temperature: number;
-  humidity: number;
-  pressure: number;
-  windSpeed: number;
+import weatherPredictionJson from './weatherPrediction.json';
+
+interface WeatherData {
+  "Temperature (°C)": string;
+  "Humidity (%)": string;
+  "Cloud Cover (%)": string;
+  "Expected Output (Rain Probability)": string;
 }
 
-// Normalize data to 0-1 range
-export function normalizeData(data: WeatherData) {
-  return {
-    input: [
-      data.temperature / 50,  // Assuming range -20 to 50°C
-      data.humidity / 100,    // Humidity is already 0-100%
-      data.pressure / 1100,   // Typical range 900-1100 hPa
-      data.windSpeed / 100    // Wind speed 0-100 km/h
-    ],
-    output: [0] // Will be set based on prediction (e.g., 1 for rain, 0 for no rain)
-  };
+interface TrainingData {
+    input: number[];
+    output: number[];
 }
 
-// Sample training data
 export const weatherData = {
-  training: [
-    // Example data points
-    { input: [0.6, 0.85, 0.95, 0.15], output: [1] },  // Rain
-    { input: [0.7, 0.45, 0.98, 0.08], output: [0] },  // No Rain
-    // Add more training data here from your dataset
-  ]
+    training: weatherPredictionJson.map((entry: WeatherData) => {
+        const temperature = parseFloat(entry["Temperature (°C)"]) / 50; // Normalize assuming range -20 to 50°C
+        const humidity = parseFloat(entry["Humidity (%)"]) / 100; // 0-1
+        const cloudCover = parseFloat(entry["Cloud Cover (%)"]) / 100; // 0-1
+        const rainProb = parseFloat(entry["Expected Output (Rain Probability)"].replace('%', '')) / 100; // 0-1
+
+        return {
+            input: [temperature, humidity, cloudCover],
+            output: [rainProb]
+        };
+    })
 };

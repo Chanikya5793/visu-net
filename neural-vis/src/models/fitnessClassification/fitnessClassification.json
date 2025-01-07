@@ -1,0 +1,156 @@
+[
+    {
+        "Heart Rate (bpm)": "60-75",
+        "Stamina Level": "High",
+        "BMI": "Normal",
+        "Fitness Classification": "Fit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "60-75",
+        "Stamina Level": "Medium",
+        "BMI": "Normal",
+        "Fitness Classification": "Fit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "60-75",
+        "Stamina Level": "Low",
+        "BMI": "Underweight",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "60-75",
+        "Stamina Level": "Low",
+        "BMI": "Overweight",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "76-90",
+        "Stamina Level": "High",
+        "BMI": "Normal",
+        "Fitness Classification": "Fit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "76-90",
+        "Stamina Level": "High",
+        "BMI": "Overweight",
+        "Fitness Classification": "Fit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "76-90",
+        "Stamina Level": "Medium",
+        "BMI": "Normal",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "76-90",
+        "Stamina Level": "Low",
+        "BMI": "Overweight",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "91-110",
+        "Stamina Level": "High",
+        "BMI": "Normal",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "91-110",
+        "Stamina Level": "High",
+        "BMI": "Overweight",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "91-110",
+        "Stamina Level": "Medium",
+        "BMI": "Normal",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "91-110",
+        "Stamina Level": "Medium",
+        "BMI": "Overweight",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "91-110",
+        "Stamina Level": "Low",
+        "BMI": "Normal",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "91-110",
+        "Stamina Level": "Low",
+        "BMI": "Obese",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "111-130",
+        "Stamina Level": "High",
+        "BMI": "Normal",
+        "Fitness Classification": "Average",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "111-130",
+        "Stamina Level": "Medium",
+        "BMI": "Normal",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "111-130",
+        "Stamina Level": "Medium",
+        "BMI": "Overweight",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "111-130",
+        "Stamina Level": "Low",
+        "BMI": "Overweight",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "111-130",
+        "Stamina Level": "Low",
+        "BMI": "Obese",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "131+",
+        "Stamina Level": "High",
+        "BMI": "Normal",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "131+",
+        "Stamina Level": "Medium",
+        "BMI": "Overweight",
+        "Fitness Classification": "Unfit",
+        "": ""
+    },
+    {
+        "Heart Rate (bpm)": "131+",
+        "Stamina Level": "Low",
+        "BMI": "Obese",
+        "Fitness Classification": "Unfit",
+        "": ""
+    }
+]
