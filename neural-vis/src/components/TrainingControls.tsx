@@ -1,6 +1,6 @@
 // src/components/TrainingControls.tsx
 import React from 'react';
-import { Box, Button, Slider, Typography } from '@mui/material';
+import { Box, Button, Slider, Typography, Tooltip } from '@mui/material';
 
 interface TrainingControlsProps {
   epochs: number;
@@ -40,33 +40,26 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
       <Button 
         variant="contained" 
         onClick={onStart}
-        disabled={isTraining || isPaused}
+        disabled={isTraining}
         sx={{ mr: 1 }}
       >
         Start Training
       </Button>
-      {!isPaused ? (
-        <Button 
-          variant="outlined" 
-          onClick={onPause}
-          disabled={!isTraining}
-          sx={{ mr: 1 }}
-        >
-          Pause
-        </Button>
-      ) : (
-        <Button 
-          variant="outlined" 
-          onClick={onContinue}
-          sx={{ mr: 1 }}
-        >
-          Continue
-        </Button>
-      )}
+      <Tooltip title="Feature under development" placement="top">
+        <span>
+          <Button 
+            variant="outlined" 
+            disabled={true}
+            sx={{ mr: 1, opacity: 0.6 }}
+          >
+            Pause
+          </Button>
+        </span>
+      </Tooltip>
       <Button 
         variant="outlined" 
         onClick={onStop}
-        disabled={!isTraining && !isPaused}
+        disabled={!isTraining}
         sx={{ mr: 1 }}
       >
         Stop
@@ -74,7 +67,7 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
       <Button 
         variant="outlined" 
         onClick={onReset}
-        disabled={isTraining || isPaused}
+        disabled={isTraining}
       >
         Reset
       </Button>

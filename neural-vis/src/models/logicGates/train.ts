@@ -1,5 +1,5 @@
 import * as brain from 'brain.js';
-import { logicGateData } from './data'; // or fitnessData for FitnessTrainer
+import { logicGateData } from './data';
 
 interface TrainingOptions {
   epochs: number;
@@ -9,125 +9,125 @@ interface TrainingOptions {
   onStop?: (reason?: string) => void;
 }
 
-export class LogicGateTrainer { // or FitnessTrainer
-  private network: brain.NeuralNetwork;
+export class LogicGateTrainer {
+  private network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
   private isPaused: boolean = false;
   private currentEpoch: number = 0;
   private totalEpochs: number = 0;
   private lastError: number = 1;
   private trainingState: any = null;
-  private trainingPromise: Promise<void> | null = null;
   
   constructor() {
+    this.initNetwork();
+  }
+
+  private initNetwork(): void {
     this.network = new brain.NeuralNetwork({
-      hiddenLayers: [3], // Use [4, 4] for FitnessTrainer
+      hiddenLayers: [3],
       activation: 'sigmoid'
     });
   }
 
-  async train(options: TrainingOptions) {
-    // If continuing from pause, use saved state
-    if (this.isPaused && this.trainingState) {
-      this.network.fromJSON(this.trainingState);
-    } else {
-      // New training session
-      this.totalEpochs = options.epochs;
-      this.currentEpoch = 0;
-      this.lastError = 1;
-    }
-    
-    this.isTraining = true;
-    this.isPaused = false;
-
+  async train(options: TrainingOptions): Promise<void> {
     try {
-      this.trainingPromise = this.network.trainAsync(logicGateData.training, { // or logicGateData/fitnessData
-        iterations: this.totalEpochs,  // Don't subtract currentEpoch
-        errorThresh: 0.0000000001,    // Practically zero
+      // Handle training state
+      if (this.isPaused && this.trainingState) {
+        this.network.fromJSON(this.trainingState);
+        this.isPaused = false;
+      } else {
+        this.totalEpochs = options.epochs;
+        this.currentEpoch = 0;
+        this.lastError = 1;
+        this.trainingState = null;
+      }
+
+      this.isTraining = true;
+
+      await this.network.trainAsync(logicGateData.training, {
+        iterations: this.totalEpochs, // Train for all epochs at once
+        errorThresh: 0.0000000001,
         log: true,
         logPeriod: 1,
-        //learningRate: 0.01, // Add learning rate to control training speed
-        timeout: Infinity, // Prevent timeout
         callback: (stats: { iterations: number, error: number }) => {
-          if (this.isPaused) {
-            this.lastError = stats.error;
-            this.trainingState = this.network.toJSON();
-            options.onPause?.();
-            return true; // Stop training
-          }
-
-          if (!this.isTraining) {
-            options.onStop?.('Training manually stopped');
-            return true; // Stop training
-          }
-
-          // Change this part - stats.iterations starts from 1
-          this.currentEpoch = stats.iterations; // Don't increment, use the actual iteration number
+          // Update current epoch
+          this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
 
-          // Update UI synchronously to match console output
-          options.onIteration?.(this.currentEpoch, stats.error);
-
-          // Only stop when we reach or exceed total epochs
-          const shouldStop = this.currentEpoch >= this.totalEpochs;
-          if (shouldStop) {
-            options.onComplete?.();
+          // Check if we should stop
+          if (!this.isTraining) {
+            options.onStop?.();
+            return true;
           }
-          return shouldStop;
+
+          // Check if we should pause
+          if (this.isPaused) {
+            this.trainingState = this.network.toJSON();
+            options.onPause?.();
+            return true;
+          }
+
+          // Update UI with current progress
+          options.onIteration?.(this.currentEpoch, stats.error);
+          
+          // Continue training unless we've reached total epochs
+          if (this.currentEpoch >= this.totalEpochs) {
+            options.onComplete?.();
+            return true;
+          }
+          
+          return false;
         }
       });
 
-      await this.trainingPromise;
-
-    } catch (error) {
-      console.error('Training error:', error);
-      options.onStop?.('Training failed: ' + error);
-    } finally {
-      if (!this.isPaused) {
-        this.isTraining = false;
-        this.trainingPromise = null;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Training error:', error);
+        options.onStop?.(error.message);
       }
     }
   }
 
-  pause() {
-    if (this.isTraining && !this.isPaused) {
+  pause(): void {
+    if (this.isTraining) {
+      this.trainingState = this.network.toJSON(); // Save state first
       this.isPaused = true;
-      // State will be saved in the callback
+      this.isTraining = false; // Stop training like stop()
     }
   }
-
-  continue(options: TrainingOptions) {
+  continue(options: TrainingOptions): void {
     if (this.isPaused && this.trainingState) {
-      // Resume from saved state
       this.train(options);
     }
   }
 
-  stop() {
-    // Complete stop and reset
+  stop(): void {
     this.isTraining = false;
     this.isPaused = false;
+    this.trainingState = null;
+  }
+
+  reset(): void {
+    this.stop();
     this.currentEpoch = 0;
     this.totalEpochs = 0;
     this.lastError = 1;
-    this.trainingState = null;
-    this.trainingPromise = null;
-    this.network = new brain.NeuralNetwork({
-      hiddenLayers: [3], // Use [4, 4] for FitnessTrainer
-      activation: 'sigmoid'
-    });
+    this.isTraining = false;
+    this.isPaused = false;
+    this.initNetwork();
   }
 
-  reset() {
-    this.stop();
-  }
-
-  predict(input: number[]) {
+  predict(input: number[]): number[] {
     return this.network.run(input);
   }
 
-  getProgress() {
+  getProgress(): {
+    currentEpoch: number;
+    totalEpochs: number;
+    lastError: number;
+    isPaused: boolean;
+    isTraining: boolean;
+  } {
     return {
       currentEpoch: this.currentEpoch,
       totalEpochs: this.totalEpochs,

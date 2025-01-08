@@ -18,7 +18,7 @@ export const TrainingMetrics: React.FC<TrainingMetricsProps> = ({
     isTraining
 }) => (
     <>
-    {isTraining && (
+    {(isTraining || iteration > 0) && (
       <Box sx={{ mt: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
         <Typography variant="h6" gutterBottom>Training Progress</Typography>
         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
@@ -39,11 +39,13 @@ export const TrainingMetrics: React.FC<TrainingMetricsProps> = ({
             <Typography variant="h6">{(accuracy * 100).toFixed(2)}%</Typography>
           </Box>
         </Box>
-        <LinearProgress 
-          variant="determinate" 
-          value={(iteration/epochs) * 100} 
-          sx={{ mt: 2 }}
-        />
+        {isTraining && (
+          <LinearProgress 
+            variant="determinate" 
+            value={(iteration/epochs) * 100} 
+            sx={{ mt: 2 }}
+          />
+        )}
       </Box>
     )}
   </>

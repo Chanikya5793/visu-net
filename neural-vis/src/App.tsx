@@ -114,10 +114,17 @@ function App() {
 
   const handleReset = () => {
     trainerRef.current?.reset();
-    resetTrainingState();
+    setEpochs(1000); // Reset to default epochs
+    setIsTraining(false);
+    setIsPaused(false);
+    setIteration(0);
+    setLoss(0);
+    setAccuracy(0);
+    setMetricsHistory([]);
     setTestInputs({});
     setPrediction([]);
-    setTrainingCompleted(false); // Reset when training is reset
+    setTrainingCompleted(false);
+    setShowTestingInterface(false);
   };
 
   const handleTest = () => {

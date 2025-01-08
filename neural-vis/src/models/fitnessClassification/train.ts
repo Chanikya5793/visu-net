@@ -10,131 +10,89 @@ interface TrainingOptions {
 }
 
 export class FitnessTrainer {
-  private network: brain.NeuralNetwork;
+  private network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
-  private isPaused: boolean = false;
   private currentEpoch: number = 0;
   private totalEpochs: number = 0;
   private lastError: number = 1;
-  private trainingState: any = null;
-  private trainingPromise: Promise<void> | null = null;
   
   constructor() {
+    this.initNetwork();
+  }
+
+  private initNetwork(): void {
     this.network = new brain.NeuralNetwork({
       hiddenLayers: [4, 4],
       activation: 'sigmoid'
     });
   }
 
-  async train(options: TrainingOptions) {
-    // If continuing from pause, use saved state
-    if (this.isPaused && this.trainingState) {
-      this.network.fromJSON(this.trainingState);
-    } else {
-      // New training session
+  async train(options: TrainingOptions): Promise<void> {
+    try {
       this.totalEpochs = options.epochs;
       this.currentEpoch = 0;
       this.lastError = 1;
-    }
-    
-    this.isTraining = true;
-    this.isPaused = false;
+      this.isTraining = true;
 
-    try {
-      this.trainingPromise = this.network.trainAsync(fitnessData.training, {
-        iterations: this.totalEpochs,  // Don't subtract currentEpoch
-        errorThresh: 0.0000000001,    // Practically zero
+      await this.network.trainAsync(fitnessData.training, {
+        iterations: this.totalEpochs,
+        errorThresh: 0.0000000001,
         log: true,
         logPeriod: 1,
-        //learningRate: 0.01, // Add learning rate to control training speed
-        timeout: Infinity, // Prevent timeout
-
         callback: (stats: { iterations: number, error: number }) => {
-          if (this.isPaused) {
-            // Save current state when paused
-            this.lastError = stats.error;
-            this.trainingState = this.network.toJSON();
-            options.onPause?.();
-            return true; // Stop training but maintain state
-          }
+          this.currentEpoch = stats.iterations;
+          this.lastError = stats.error;
 
           if (!this.isTraining) {
-            options.onStop?.('Training manually stopped');
+            options.onStop?.();
             return true;
           }
 
-          // Change this part - stats.iterations starts from 1
-          this.currentEpoch = stats.iterations; // Don't increment, use the actual iteration number
-          this.lastError = stats.error;
-
-          // Update UI synchronously to match console output
           options.onIteration?.(this.currentEpoch, stats.error);
-
-          // Only stop when we reach or exceed total epochs
-          const shouldStop = this.currentEpoch >= this.totalEpochs;
-          if (shouldStop) {
+          
+          if (this.currentEpoch >= this.totalEpochs) {
             options.onComplete?.();
+            return true;
           }
-          return shouldStop;
+          
+          return false;
         }
       });
 
-      await this.trainingPromise;
-
-    } catch (error) {
-      console.error('Training error:', error);
-      options.onStop?.('Training failed: ' + error);
-    } finally {
-      if (!this.isPaused) {
-        this.isTraining = false;
-        this.trainingPromise = null;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Training error:', error);
+        options.onStop?.(error.message);
       }
     }
   }
 
-  pause() {
-    if (this.isTraining && !this.isPaused) {
-      this.isPaused = true;
-      // State will be saved in the callback
-    }
-  }
-
-  continue(options: TrainingOptions) {
-    if (this.isPaused && this.trainingState) {
-      // Resume from saved state
-      this.train(options);
-    }
-  }
-
-  stop() {
-    // Complete stop and reset
+  stop(): void {
     this.isTraining = false;
-    this.isPaused = false;
+  }
+
+  reset(): void {
+    this.stop();
     this.currentEpoch = 0;
     this.totalEpochs = 0;
     this.lastError = 1;
-    this.trainingState = null;
-    this.trainingPromise = null;
-    this.network = new brain.NeuralNetwork({
-      hiddenLayers: [4, 4],
-      activation: 'sigmoid'
-    });
+    this.initNetwork();
   }
 
-  reset() {
-    this.stop();
-  }
-
-  predict(input: number[]) {
+  predict(input: number[]): number[] {
     return this.network.run(input);
   }
 
-  getProgress() {
+  getProgress(): {
+    currentEpoch: number;
+    totalEpochs: number;
+    lastError: number;
+    isTraining: boolean;
+  } {
     return {
       currentEpoch: this.currentEpoch,
       totalEpochs: this.totalEpochs,
       lastError: this.lastError,
-      isPaused: this.isPaused,
       isTraining: this.isTraining
     };
   }
