@@ -50,6 +50,11 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
                 <MenuItem value="XOR">XOR</MenuItem>
                 <MenuItem value="NAND">NAND</MenuItem>
                 <MenuItem value="NOR">NOR</MenuItem>
+                <MenuItem value="XNOR">XNOR</MenuItem>
+                <MenuItem value="IMPLIES">IMPLIES</MenuItem>
+                <MenuItem value="NIMPLIES">NIMPLIES</MenuItem>
+                <MenuItem value="NOT">NOT</MenuItem>
+                <MenuItem value="BUFFER">BUFFER</MenuItem>
               </Select>
             </FormControl>
 

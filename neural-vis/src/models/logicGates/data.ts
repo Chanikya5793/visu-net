@@ -7,18 +7,17 @@ interface TrainingData {
 
 export function mapGateType(type: string): number[] {
     switch (type.toUpperCase()) {
-        case 'AND':
-            return [1, 0, 0, 0, 0];
-        case 'OR':
-            return [0, 1, 0, 0, 0];
-        case 'XOR':
-            return [0, 0, 1, 0, 0];
-        case 'NAND':
-            return [0, 0, 0, 1, 0];
-        case 'NOR':
-            return [0, 0, 0, 0, 1];
-        default:
-            return [0, 0, 0, 0, 0];
+        case 'AND':    return [1, 0, 0, 0, 0, 0, 0, 0, 0];
+        case 'OR':     return [0, 1, 0, 0, 0, 0, 0, 0, 0];
+        case 'XOR':    return [0, 0, 1, 0, 0, 0, 0, 0, 0];
+        case 'NAND':   return [0, 0, 0, 1, 0, 0, 0, 0, 0];
+        case 'NOR':    return [0, 0, 0, 0, 1, 0, 0, 0, 0];
+        case 'XNOR':   return [0, 0, 0, 0, 0, 1, 0, 0, 0];
+        case 'IMPLIES':return [0, 0, 0, 0, 0, 0, 1, 0, 0];
+        case 'NIMPLIES':return[0, 0, 0, 0, 0, 0, 0, 1, 0];
+        case 'NOT':    return [0, 0, 0, 0, 0, 0, 0, 0, 1];
+        case 'BUFFER': return [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        default:       return [0, 0, 0, 0, 0, 0, 0, 0, 0];
     }
 }
 

@@ -14,6 +14,7 @@ import './App.css';
 import { TestModelButton } from './components/TestModelButton';
 import { NeuronViz } from './components/NeuronViz';
 import { ITrainer } from './models/TrainerInterface';
+import { DatasetViewer } from './components/DatasetViewer';
 
 interface MetricPoint {
   epoch: number;
@@ -273,12 +274,32 @@ function App() {
   };
 
   const handleArchitectureChange = (newLayers: number[]) => {
+    if (isTraining) return; // Extra safety check
+    
     if (trainerRef.current) {
+      // Stop any ongoing training
+      handleStop();
+      
+      // Reset the trainer with new architecture
       trainerRef.current.reset();
       trainerRef.current.initNetwork(newLayers);
-      setNetworkWeights(trainerRef.current.getWeights());
-      setNetworkActivations(trainerRef.current.getActivations());
-      setNetworkBiases(trainerRef.current.getBiases());
+      
+      // Reset all states
+      setNetworkActivations([]);
+      setNetworkWeights([]);
+      setNetworkBiases([]);
+      setMetricsHistory([]);
+      setIteration(0);
+      setLoss(0);
+      setAccuracy(0);
+      setTrainingCompleted(false);
+      
+      // Update visualization after architecture change
+      if (trainerRef.current) {
+        setNetworkActivations(trainerRef.current.getActivations());
+        setNetworkWeights(trainerRef.current.getWeights());
+        setNetworkBiases(trainerRef.current.getBiases());
+      }
     }
   };
 
@@ -290,6 +311,7 @@ function App() {
       
       {dataset && (
         <>
+          <DatasetViewer dataset={dataset} />
           <TrainingControls 
             epochs={epochs}
             isTraining={isTraining}

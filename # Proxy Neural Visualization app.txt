@@ -1,4 +1,36 @@
-// src/components/NeuronViz.tsx
+    # Proxy Neural Visualization app
+    # Proxy local server on localhost:3000
+    location /neural-vis/ {
+        # If Nginx is running on the same machine as the app:
+        #proxy_pass http://127.0.0.1:3000/;
+        
+        # If Nginx is running in Docker on a Mac, use host.docker.internal:
+        proxy_pass http://host.docker.internal:3000/;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (if needed)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // src/components/NeuronViz.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { 
   Box, useTheme, Paper, Typography, Button, Slider,
@@ -370,8 +402,7 @@ const LayerComparison: React.FC<{
 const ArchitectureEditor: React.FC<{
   layers: number[];
   onChange: (newLayers: number[]) => void;
-  isTraining: boolean;  // Add this prop
-}> = ({ layers, onChange, isTraining }) => {
+}> = ({ layers, onChange }) => {
   const [editedLayers, setEditedLayers] = useState(layers);
 
   const handleLayerChange = (index: number, value: number) => {
@@ -380,21 +411,17 @@ const ArchitectureEditor: React.FC<{
     setEditedLayers(newLayers);
   };
 
+  const handleApply = () => {
+    onChange(editedLayers);
+  };
+
   return (
     <Paper sx={{ p: 2, mt: 2 }}>
       <Typography variant="h6" gutterBottom>Network Architecture</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Modify the number of neurons in each hidden layer. Changes will reset the network training.
-        Cannot be modified during training.
-      </Typography>
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         {editedLayers.map((neurons, idx) => (
           <Box key={idx} sx={{ minWidth: 120 }}>
-            <Typography variant="caption">
-              {idx === 0 ? 'Input Layer' : 
-               idx === layers.length - 1 ? 'Output Layer' : 
-               `Hidden Layer ${idx}`}
-            </Typography>
+            <Typography variant="caption">{`Layer ${idx}`}</Typography>
             <Slider
               value={neurons}
               onChange={(_, value) => handleLayerChange(idx, value as number)}
@@ -402,17 +429,12 @@ const ArchitectureEditor: React.FC<{
               max={10}
               step={1}
               marks
-              disabled={isTraining || idx === 0 || idx === layers.length - 1}
+              disabled={idx === 0 || idx === layers.length - 1}
               valueLabelDisplay="auto"
             />
           </Box>
         ))}
-        <Button 
-          variant="contained" 
-          onClick={() => onChange(editedLayers)}
-          disabled={isTraining}
-          sx={{ mt: 2 }}
-        >
+        <Button variant="contained" onClick={handleApply}>
           Apply Changes
         </Button>
       </Box>
@@ -476,88 +498,41 @@ const ErrorSurfaceViz: React.FC<{
   );
 };
 
-const NeuronColorLegend: React.FC<{ dataset: string; layerIndex: number; totalLayers: number }> = ({ 
-  dataset, 
-  layerIndex, 
-  totalLayers 
-}) => {
-  const getLayerColor = (layerIndex: number, totalLayers: number) => {
-    const colors = {
-      input: '#ff9800',    // Orange
-      hidden1: '#2196f3',  // Blue
-      hidden2: '#4caf50',  // Green
-      hidden3: '#9c27b0',  // Purple
-      output: '#f44336'    // Red
-    };
-
-    if (layerIndex === 0) return colors.input;
-    if (layerIndex === totalLayers - 1) return colors.output;
-
-    switch(layerIndex) {
-      case 1: return colors.hidden1;
-      case 2: return colors.hidden2;
-      case 3: return colors.hidden3;
-      default: return colors.hidden1;
-    }
-  };
-
-  const baseColor = getLayerColor(layerIndex, totalLayers);
-  const r = parseInt(baseColor.slice(1, 3), 16);
-  const g = parseInt(baseColor.slice(3, 5), 16);
-  const b = parseInt(baseColor.slice(5, 7), 16);
-
-  const getActivationLabel = (value: number) => {
-    switch(dataset) {
-      case 'logicGates':
-        return value === 1 ? 'True/1' : value === 0 ? 'False/0' : `${value.toFixed(1)}`;
-      case 'weatherPrediction':
-        return `${(value * 100).toFixed(0)}% Rain Probability`;
-      case 'fitnessClassification':
-        if (value >= 0.66) return 'Fit';
-        if (value >= 0.33) return 'Average';
-        return 'Unfit';
-      default:
-        return `${value.toFixed(1)}`;
-    }
-  };
-
-  const steps = Array.from({ length: 11 }, (_, i) => i / 10); // 0.0 to 1.0 in 0.1 steps
-
-  return (
-    <Paper sx={{ p: 2, mt: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Neuron Color Guide - {layerIndex === 0 ? 'Input' : 
-                            layerIndex === totalLayers - 1 ? 'Output' : 
-                            `Hidden Layer ${layerIndex}`}
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {steps.map(value => (
-          <Box 
-            key={value} 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1,
-              minWidth: '150px'
-            }}
-          >
-            <Box sx={{ 
-              width: 20, 
-              height: 20, 
-              borderRadius: '50%', 
-              background: `rgba(${r}, ${g}, ${b}, ${0.3 + value * 0.7})`
-            }} />
-            <Typography variant="caption">
-              {getActivationLabel(value)}
-            </Typography>
-          </Box>
-        ))}
+const NeuronColorLegend: React.FC = () => (
+  <Paper sx={{ p: 2, mt: 2 }}>
+    <Typography variant="h6" gutterBottom>Neuron Color Guide</Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          width: 20, 
+          height: 20, 
+          borderRadius: '50%', 
+          background: 'rgba(255, 0, 0, 0.8)' 
+        }} />
+        <Typography>High Activation (1.0)</Typography>
       </Box>
-    </Paper>
-  );
-};
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          width: 20, 
+          height: 20, 
+          borderRadius: '50%', 
+          background: 'rgba(127, 127, 255, 0.8)' 
+        }} />
+        <Typography>Medium Activation (0.5)</Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          width: 20, 
+          height: 20, 
+          borderRadius: '50%', 
+          background: 'rgba(0, 0, 255, 0.8)' 
+        }} />
+        <Typography>Low Activation (0.0)</Typography>
+      </Box>
+    </Box>
+  </Paper>
+);
 
-// Update the main NeuronViz component to use the enhanced legend
 export const NeuronViz: React.FC<NeuronVizProps> = ({
   layers,
   activations,
@@ -632,38 +607,13 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
     return `Hidden Layer ${index}`;
   };
 
-  const getLayerColor = (layerIndex: number, totalLayers: number) => {
-    const colors = {
-      input: '#ff9800',    // Orange
-      hidden1: '#2196f3',  // Blue
-      hidden2: '#4caf50',  // Green
-      hidden3: '#9c27b0',  // Purple
-      output: '#f44336'    // Red
-    };
-
-    if (layerIndex === 0) return colors.input;
-    if (layerIndex === totalLayers - 1) return colors.output;
-
-    // For hidden layers
-    switch(layerIndex) {
-      case 1: return colors.hidden1;
-      case 2: return colors.hidden2;
-      case 3: return colors.hidden3;
-      default: return colors.hidden1; // Fallback for additional hidden layers
-    }
-  };
-
   const getNeuronColor = (layerIndex: number, neuronIndex: number) => {
-    const baseColor = getLayerColor(layerIndex, layers.length);
+    if (animationState.currentLayer === layerIndex) {
+      const activation = animationState.signal[neuronIndex] || 0;
+      return `rgba(${activation * 255}, ${activation * 100}, ${(1 - activation) * 255}, 1)`;
+    }
     const activation = activations?.[layerIndex]?.[neuronIndex] || 0;
-    
-    // Convert the hex color to RGB to apply activation
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-    
-    // Adjust opacity based on activation
-    return `rgba(${r}, ${g}, ${b}, ${0.3 + activation * 0.7})`;
+    return `rgba(${activation * 255}, ${activation * 100}, ${(1 - activation) * 255}, 0.8)`;
   };
 
   const getConnectionKey = (fromLayer: number, fromNeuron: number, toLayer: number, toNeuron: number) => {
@@ -849,14 +799,14 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
             
             return (
               <g key={`neuron-${layerIndex}-${neuronIndex}`}>
-                  <circle
-                    cx={(layerIndex + 1) * layerSpacing}
-                    cy={(neuronIndex + 1) * verticalSpacing}
-                    r={neuronRadius}
-                    fill={getNeuronColor(layerIndex, neuronIndex)}
-                    stroke={theme.palette.grey[400]}
-                    style={{ transition: 'all 0.3s ease-in-out' }}
-                  >
+                <circle
+                  cx={(layerIndex + 1) * layerSpacing}
+                  cy={(neuronIndex + 1) * verticalSpacing}
+                  r={neuronRadius}
+                  fill={getNeuronColor(layerIndex, neuronIndex)}
+                  stroke={theme.palette.grey[400]}
+                  style={{ transition: 'all 0.3s ease-in-out' }}
+                >
                   <title>
                     {`Layer ${layerIndex}, Neuron ${neuronIndex}
                     Activation: ${(activations?.[layerIndex]?.[neuronIndex] || 0).toFixed(3)}
@@ -994,17 +944,8 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
         )}
       </Box>
 
-      {/* Add color legends for each layer */}
-      <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {layers.map((_, layerIndex) => (
-          <NeuronColorLegend 
-            key={layerIndex}
-            dataset={dataset}
-            layerIndex={layerIndex}
-            totalLayers={layers.length}
-          />
-        ))}
-      </Box>
+      {/* Add color legend before the network visualization */}
+      <NeuronColorLegend />
 
       {/* Network Visualization */}
       <Box sx={{ display: 'flex', gap: 2 }}>
@@ -1059,7 +1000,6 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
         <ArchitectureEditor
           layers={layers}
           onChange={onArchitectureChange}
-          isTraining={isTraining}
         />
       )}
 
