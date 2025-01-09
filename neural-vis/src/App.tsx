@@ -12,6 +12,8 @@ import { mapGateType } from './models/logicGates/data';
 import { mapHeartRate, mapBMI, mapStamina } from './models/fitnessClassification/data';
 import './App.css';
 import { TestModelButton } from './components/TestModelButton';
+import { NeuronViz } from './components/NeuronViz';
+import { ITrainer } from './models/TrainerInterface';
 
 interface MetricPoint {
   epoch: number;
@@ -33,8 +35,13 @@ function App() {
   const [prediction, setPrediction] = useState<number[]>([]);
   const [trainingCompleted, setTrainingCompleted] = useState<boolean>(false);
   const [showTestingInterface, setShowTestingInterface] = useState<boolean>(false);
+  const [networkActivations, setNetworkActivations] = useState<number[][]>([]);
+  const [networkWeights, setNetworkWeights] = useState<number[][][]>([]);
+  const [networkBiases, setNetworkBiases] = useState<number[][]>([]);
+  const [learningRate, setLearningRate] = useState(0.01);
+  const [trainingSpeed, setTrainingSpeed] = useState(1);
 
-  const trainerRef = useRef<LogicGateTrainer | FitnessTrainer | WeatherTrainer | null>(null);
+  const trainerRef = useRef<ITrainer | null>(null);
 
   // Handlers
   const handleChange = (event: SelectChangeEvent<string>) => {
@@ -92,6 +99,13 @@ function App() {
     setLoss(err);
     setAccuracy(1 - err);
     setMetricsHistory(prev => [...prev, { epoch: iter, loss: err, accuracy: 1 - err }]);
+    
+    // Update network state
+    if (trainerRef.current) {
+      setNetworkActivations(trainerRef.current.getActivations());
+      setNetworkWeights(trainerRef.current.getWeights());
+      setNetworkBiases(trainerRef.current.getBiases());
+    }
   };
 
   const handleComplete = () => {
@@ -113,18 +127,42 @@ function App() {
   };
 
   const handleReset = () => {
+    // Reset trainer and basic metrics
     trainerRef.current?.reset();
-    setEpochs(1000); // Reset to default epochs
+    
+    // Reset training parameters
+    setEpochs(1000);
+    setLearningRate(0.01);
+    setTrainingSpeed(1);
+    
+    // Reset states
     setIsTraining(false);
     setIsPaused(false);
     setIteration(0);
     setLoss(0);
     setAccuracy(0);
     setMetricsHistory([]);
+    
+    // Reset testing interface
     setTestInputs({});
     setPrediction([]);
     setTrainingCompleted(false);
     setShowTestingInterface(false);
+  
+    // Reset network visualization states
+    setNetworkActivations([]);
+    setNetworkWeights([]);
+    setNetworkBiases([]);
+  
+    // Reset network architecture to default based on dataset
+    if (trainerRef.current && dataset) {
+      const defaultArchitecture = getNetworkArchitecture(dataset);
+      trainerRef.current.initNetwork(defaultArchitecture);
+      // Update visualizations after resetting architecture
+      setNetworkActivations(trainerRef.current.getActivations());
+      setNetworkWeights(trainerRef.current.getWeights());
+      setNetworkBiases(trainerRef.current.getBiases());
+    }
   };
 
   const handleTest = () => {
@@ -169,6 +207,81 @@ function App() {
     setShowTestingInterface(true);
   };
 
+  const getNetworkArchitecture = (selectedDataset: string): number[] => {
+    switch(selectedDataset) {
+      case 'logicGates':
+        return [7, 3, 1]; // Input(2 + 5 for gate type), Hidden(3), Output(1)
+      case 'fitnessClassification':
+        return [3, 4, 4, 1]; // Input(3), Hidden(4,4), Output(1)
+      case 'weatherPrediction':
+        return [3, 6, 4, 1]; // Input(3), Hidden(6,4), Output(1)
+      default:
+        return [];
+    }
+  };
+
+  const handleWeightAdjust = (layerIndex: number, fromNeuron: number, toNeuron: number, newWeight: number) => {
+    if (trainerRef.current) {
+      trainerRef.current.adjustWeight(layerIndex, fromNeuron, toNeuron, newWeight);
+      // Update visualizations
+      setNetworkWeights(trainerRef.current.getWeights());
+      setNetworkActivations(trainerRef.current.getActivations());
+    }
+  };
+
+  const handleLearningRateChange = (newRate: number) => {
+    if (trainerRef.current) {
+      trainerRef.current.setLearningRate(newRate);
+      setLearningRate(newRate);
+    }
+  };
+
+  const handleExportNetwork = () => {
+    if (trainerRef.current) {
+      const networkConfig = trainerRef.current.exportNetwork();
+      const blob = new Blob([networkConfig], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `network-config-${dataset}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleImportNetwork = (data: string) => {
+    if (trainerRef.current) {
+      trainerRef.current.importNetwork(data);
+      // Update visualizations
+      setNetworkWeights(trainerRef.current.getWeights());
+      setNetworkActivations(trainerRef.current.getActivations());
+      setNetworkBiases(trainerRef.current.getBiases());
+    }
+  };
+
+  const handleTrainingSpeedChange = (speed: number) => {
+    setTrainingSpeed(speed);
+    if (trainerRef.current) {
+      const network = trainerRef.current.getNetwork();
+      const networkState = network.toJSON();
+      networkState.trainOpts = {
+        ...networkState.trainOpts,
+        iterations: Math.floor(epochs * speed)
+      };
+      network.fromJSON(networkState);
+    }
+  };
+
+  const handleArchitectureChange = (newLayers: number[]) => {
+    if (trainerRef.current) {
+      trainerRef.current.reset();
+      trainerRef.current.initNetwork(newLayers);
+      setNetworkWeights(trainerRef.current.getWeights());
+      setNetworkActivations(trainerRef.current.getActivations());
+      setNetworkBiases(trainerRef.current.getBiases());
+    }
+  };
+
   return (
     <Container className="App">
       <Typography variant="h4" gutterBottom>Neural Network Visualization</Typography>
@@ -198,6 +311,24 @@ function App() {
           />
           
           <MetricsGraph metricsHistory={metricsHistory} />
+
+          <NeuronViz 
+            layers={getNetworkArchitecture(dataset)}
+            activations={networkActivations}
+            weights={networkWeights}
+            biases={networkBiases}
+            dataset={dataset}
+            isTraining={isTraining}
+            onWeightAdjust={handleWeightAdjust}
+            learningRate={learningRate}
+            onLearningRateChange={handleLearningRateChange}
+            onExportNetwork={handleExportNetwork}
+            onImportNetwork={handleImportNetwork}
+            performanceMetrics={trainerRef.current?.getPerformanceMetrics()}
+            trainingSpeed={trainingSpeed}
+            onTrainingSpeedChange={handleTrainingSpeedChange}
+            onArchitectureChange={handleArchitectureChange}
+          />
           
           {!isTraining && iteration > 0 && (
             <>
