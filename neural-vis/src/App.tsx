@@ -1,26 +1,24 @@
-import React, { useState, useRef } from 'react';
-import { Container, Typography, SelectChangeEvent, Box, Button, Tooltip } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
+import { Box, Button, Container, SelectChangeEvent, Tooltip, Typography } from '@mui/material';
+import { useRef, useState } from 'react';
+import './App.css';
+import { CustomDatasetCreator } from './components/CustomDatasetCreator';
 import { DatasetSelector } from './components/DatasetSelector';
+import { DatasetViewer } from './components/DatasetViewer';
+import { MetricsGraph } from './components/MetricsGraph';
+import { NeuronViz } from './components/NeuronViz';
+import { TestingInterface } from './components/TestingInterface';
+import { TestModelButton } from './components/TestModelButton';
 import { TrainingControls } from './components/TrainingControls';
 import { TrainingMetrics } from './components/TrainingMetrics';
-import { TestingInterface } from './components/TestingInterface';
-import { MetricsGraph } from './components/MetricsGraph';
-import { LogicGateTrainer } from './models/logicGates/train';
+import { fitnessData, mapBMI, mapHeartRate, mapStamina } from './models/fitnessClassification/data';
 import { FitnessTrainer } from './models/fitnessClassification/train';
-import { WeatherTrainer } from './models/weatherPrediction/train';
-import { mapGateType } from './models/logicGates/data';
-import { mapHeartRate, mapBMI, mapStamina } from './models/fitnessClassification/data';
-import './App.css';
-import { TestModelButton } from './components/TestModelButton';
-import { NeuronViz } from './components/NeuronViz';
+import { logicGateData, mapGateType } from './models/logicGates/data';
+import { LogicGateTrainer } from './models/logicGates/train';
 import { ITrainer } from './models/TrainerInterface';
-import { DatasetViewer } from './components/DatasetViewer';
-import { CustomDatasetCreator } from './components/CustomDatasetCreator';
-import DownloadIcon from '@mui/icons-material/Download';
-import { downloadFile, exportToCSV, createModelExport } from './utils/exportUtils';
-import { logicGateData } from './models/logicGates/data';
-import { fitnessData } from './models/fitnessClassification/data';
 import { weatherData } from './models/weatherPrediction/data';
+import { WeatherTrainer } from './models/weatherPrediction/train';
+import { createModelExport } from './utils/exportUtils';
 
 interface MetricPoint {
   epoch: number;
@@ -76,11 +74,11 @@ function App() {
   const createTrainer = (selectedDataset: string) => {
     switch(selectedDataset) {
       case 'logicGates': 
-        return new LogicGateTrainer(customDataset.length > 0 ? customDataset : undefined);
+        return new LogicGateTrainer(isUsingCustomDataset && customDataset.length > 0 ? customDataset : undefined);
       case 'fitnessClassification':
-        return new FitnessTrainer(customDataset.length > 0 ? customDataset : undefined);
+        return new FitnessTrainer(isUsingCustomDataset && customDataset.length > 0 ? customDataset : undefined);
       case 'weatherPrediction':
-        return new WeatherTrainer(customDataset.length > 0 ? customDataset : undefined);
+        return new WeatherTrainer(isUsingCustomDataset && customDataset.length > 0 ? customDataset : undefined);
       default:
         return null;
     }
@@ -317,13 +315,12 @@ function App() {
 
   const handleSaveCustomDataset = (data: any[]) => {
     setCustomDataset(data);
-    // Reset any existing training
+    setIsUsingCustomDataset(true);  // Automatically set to use custom dataset
     handleReset();
   };
 
   const handleUseDefaultDataset = () => {
     setIsUsingCustomDataset(false);
-    setCustomDataset([]);
     handleReset();
   };
 
@@ -436,20 +433,29 @@ function App() {
             )}
           </Box>
 
-          <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2 }}>
-            <Button
-              variant={!isUsingCustomDataset ? "contained" : "outlined"}
-              onClick={handleUseDefaultDataset}
-            >
-              Use Default Dataset
-            </Button>
-            <Button
-              variant={isUsingCustomDataset ? "contained" : "outlined"}
-              onClick={handleUseCustomDataset}
-              disabled={customDataset.length === 0}
-            >
-              Use Custom Dataset
-            </Button>
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant={!isUsingCustomDataset ? "contained" : "outlined"}
+                onClick={handleUseDefaultDataset}
+                disabled={isTraining}  // Disable during training
+              >
+                Use Default Dataset
+              </Button>
+              <Button
+                variant={isUsingCustomDataset ? "contained" : "outlined"}
+                onClick={handleUseCustomDataset}
+                disabled={customDataset.length === 0 || isTraining}  // Disable if no custom dataset or during training
+              >
+                Use Custom Dataset
+              </Button>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {isUsingCustomDataset 
+                ? `Currently using custom dataset with ${customDataset.length} samples`
+                : `Currently using default dataset for ${dataset}`
+              }
+            </Typography>
           </Box>
 
           <TrainingControls 
@@ -462,6 +468,7 @@ function App() {
             onContinue={startTraining}
             onStop={handleStop}
             onReset={handleReset}
+            currentDataset={isUsingCustomDataset ? 'custom' : 'default'}  // Add this prop
           />
           
           <TrainingMetrics 

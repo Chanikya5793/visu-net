@@ -1,31 +1,29 @@
 // src/components/CustomDatasetCreator.tsx
-import React, { useState } from 'react';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
   Box,
   Button,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Select,
-  MenuItem,
-  IconButton,
-  Typography,
-  FormControl,
-  InputLabel,
-  TextField
+  TextField,
+  Typography
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { mapGateType } from '../models/logicGates/data';
+import React, { useRef, useState } from 'react';
 import { mapBMI, mapHeartRate, mapStamina } from '../models/fitnessClassification/data';
+import { mapGateType } from '../models/logicGates/data';
 
 interface CustomDatasetCreatorProps {
   dataset: string;
@@ -40,6 +38,8 @@ export const CustomDatasetCreator: React.FC<CustomDatasetCreatorProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [customData, setCustomData] = useState<any[]>([]);
+  const addRowButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   const getHeaders = () => {
     switch(dataset) {
@@ -78,7 +78,22 @@ export const CustomDatasetCreator: React.FC<CustomDatasetCreatorProps> = ({
   };
 
   const addNewRow = () => {
-    setCustomData([...customData, getDefaultRowData()]);
+    setCustomData(prevData => {
+      const newData = [...prevData, getDefaultRowData()];
+      // Wait for the next frame to ensure DOM update
+      requestAnimationFrame(() => {
+        if (dialogContentRef.current && addRowButtonRef.current) {
+          const buttonBottom = addRowButtonRef.current.offsetTop + addRowButtonRef.current.offsetHeight;
+          const scrollHeight = dialogContentRef.current.scrollHeight;
+          
+          dialogContentRef.current.scrollTo({
+            top: Math.max(0, buttonBottom - dialogContentRef.current.clientHeight + 20),
+            behavior: 'smooth'
+          });
+        }
+      });
+      return newData;
+    });
   };
 
   const deleteRow = (index: number) => {
@@ -251,7 +266,28 @@ export const CustomDatasetCreator: React.FC<CustomDatasetCreatorProps> = ({
         <DialogTitle>
           Create Custom {dataset.charAt(0).toUpperCase() + dataset.slice(1)} Dataset
         </DialogTitle>
-        <DialogContent>
+        <DialogContent 
+          ref={dialogContentRef}
+          sx={{ 
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            scrollBehavior: 'smooth',
+            '&::-webkit-scrollbar': {
+              width: '8px'
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+              borderRadius: '4px'
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#888',
+              borderRadius: '4px',
+              '&:hover': {
+                background: '#555'
+              }
+            }
+          }}
+        >
           <Typography color="text.secondary" sx={{ mb: 2 }}>
             {getDatasetRequirements()}
           </Typography>
@@ -283,13 +319,23 @@ export const CustomDatasetCreator: React.FC<CustomDatasetCreatorProps> = ({
               </TableBody>
             </Table>
           </TableContainer>
-          <Button
-            startIcon={<AddIcon />}
-            onClick={addNewRow}
-            sx={{ mt: 2 }}
-          >
-            Add Row
-          </Button>
+          <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Button
+              ref={addRowButtonRef}
+              startIcon={<AddIcon />}
+              onClick={addNewRow}
+            >
+              Add Row
+            </Button>
+            <Button
+              startIcon={<DeleteIcon />}
+              onClick={() => setCustomData([])}
+              color="error"
+              disabled={customData.length === 0}
+            >
+              Reset Dataset
+            </Button>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>

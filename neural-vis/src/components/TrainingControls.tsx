@@ -1,6 +1,6 @@
 // src/components/TrainingControls.tsx
+import { Box, Button, Slider, Tooltip, Typography } from '@mui/material';
 import React from 'react';
-import { Box, Button, Slider, Typography, Tooltip } from '@mui/material';
 
 interface TrainingControlsProps {
   epochs: number;
@@ -12,6 +12,7 @@ interface TrainingControlsProps {
   onContinue: () => void;
   onStop: () => void;
   onReset: () => void;
+  currentDataset: 'custom' | 'default';
 }
 
 export const TrainingControls: React.FC<TrainingControlsProps> = ({
@@ -23,7 +24,8 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
   onPause,
   onContinue,
   onStop,
-  onReset
+  onReset,
+  currentDataset
 }) => (
   <Box sx={{ mt: 2 }}>
     <Typography gutterBottom>Number of Epochs</Typography>
@@ -37,14 +39,16 @@ export const TrainingControls: React.FC<TrainingControlsProps> = ({
       disabled={isTraining}
     />
     <Box sx={{ mt: 2 }}>
-      <Button 
-        variant="contained" 
-        onClick={onStart}
-        disabled={isTraining}
-        sx={{ mr: 1 }}
-      >
-        Start Training
-      </Button>
+      <Tooltip title={`Using ${currentDataset} dataset for training`}>
+        <Button 
+          variant="contained" 
+          onClick={onStart}
+          disabled={isTraining}
+          sx={{ mr: 1 }}
+        >
+          Start Training
+        </Button>
+      </Tooltip>
       <Tooltip title="Feature under development" placement="top">
         <span>
           <Button 
