@@ -15,6 +15,21 @@ import {
   TooltipProps
 } from 'recharts';
 
+// At the top of NeuronViz.tsx after imports
+const styles = {
+  tooltipContainer: {
+    backgroundColor: '#fff',
+    padding: '10px',
+    border: '1px solid #ccc'
+  },
+  networkDiagram: {
+    transition: 'all 0.3s ease-in-out'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '200px'
+  }
+};
 
 // Add new props for enhanced features
 interface NeuronVizProps {
@@ -289,11 +304,7 @@ const WeightDistribution: React.FC<WeightDistributionProps> = ({ weights }) => {
               content={({ active, payload, label }: TooltipProps<number, string>) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div style={{ 
-                      backgroundColor: '#fff', 
-                      padding: '10px', 
-                      border: '1px solid #ccc' 
-                 }}>
+                    <div style={styles.tooltipContainer}>
                       <p>{`Weight: ${label}`}</p>
                       <p>{`Frequency: ${payload[0].value}`}</p>
                     </div>
@@ -848,7 +859,7 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
                   stroke={theme.palette.grey[600]} // Darker grey
                   strokeWidth={Math.max(0.8, Math.abs(weight) * 2)} // Minimum width of 0.8
                   opacity={isActive ? 1 : 0.6} // Increased minimum opacity
-                  style={{ transition: 'all 0.3s ease-in-out' }}
+                  style={styles.networkDiagram}
                 />
                 {Math.abs(weight) > 0.1 && (
                   <text
@@ -891,7 +902,7 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
                       r={neuronRadius}
                       fill={getNeuronColor(layerIndex, neuronIndex)}
                       stroke={theme.palette.grey[400]}
-                      style={{ transition: 'all 0.3s ease-in-out' }}
+                      style={styles.networkDiagram}
                       onClick={() => handleNeuronClick(layerIndex, neuronIndex)}
                       cursor="pointer"
                     >
@@ -1204,7 +1215,7 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
           <textarea
             value={importData}
             onChange={(e) => setImportData(e.target.value)}
-            style={{ width: '100%', minHeight: '200px' }}
+            style={styles.textarea}
             placeholder="Paste network configuration JSON here..."
           />
         </DialogContent>
