@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Container, Typography, SelectChangeEvent } from '@mui/material';
+import { Container, Typography, SelectChangeEvent, Box, Button, Tooltip } from '@mui/material';
 import { DatasetSelector } from './components/DatasetSelector';
 import { TrainingControls } from './components/TrainingControls';
 import { TrainingMetrics } from './components/TrainingMetrics';
@@ -15,6 +15,12 @@ import { TestModelButton } from './components/TestModelButton';
 import { NeuronViz } from './components/NeuronViz';
 import { ITrainer } from './models/TrainerInterface';
 import { DatasetViewer } from './components/DatasetViewer';
+import { CustomDatasetCreator } from './components/CustomDatasetCreator';
+import DownloadIcon from '@mui/icons-material/Download';
+import { downloadFile, exportToCSV, createModelExport } from './utils/exportUtils';
+import { logicGateData } from './models/logicGates/data';
+import { fitnessData } from './models/fitnessClassification/data';
+import { weatherData } from './models/weatherPrediction/data';
 
 interface MetricPoint {
   epoch: number;
@@ -41,6 +47,8 @@ function App() {
   const [networkBiases, setNetworkBiases] = useState<number[][]>([]);
   const [learningRate, setLearningRate] = useState(0.01);
   const [trainingSpeed, setTrainingSpeed] = useState(1);
+  const [customDataset, setCustomDataset] = useState<any[]>([]);
+  const [isUsingCustomDataset, setIsUsingCustomDataset] = useState(false);
 
   const trainerRef = useRef<ITrainer | null>(null);
 
@@ -67,10 +75,14 @@ function App() {
   // Helper functions
   const createTrainer = (selectedDataset: string) => {
     switch(selectedDataset) {
-      case 'logicGates': return new LogicGateTrainer();
-      case 'fitnessClassification': return new FitnessTrainer();
-      case 'weatherPrediction': return new WeatherTrainer();
-      default: return null;
+      case 'logicGates': 
+        return new LogicGateTrainer(customDataset.length > 0 ? customDataset : undefined);
+      case 'fitnessClassification':
+        return new FitnessTrainer(customDataset.length > 0 ? customDataset : undefined);
+      case 'weatherPrediction':
+        return new WeatherTrainer(customDataset.length > 0 ? customDataset : undefined);
+      default:
+        return null;
     }
   };
 
@@ -303,6 +315,91 @@ function App() {
     }
   };
 
+  const handleSaveCustomDataset = (data: any[]) => {
+    setCustomDataset(data);
+    // Reset any existing training
+    handleReset();
+  };
+
+  const handleUseDefaultDataset = () => {
+    setIsUsingCustomDataset(false);
+    setCustomDataset([]);
+    handleReset();
+  };
+
+  const handleUseCustomDataset = () => {
+    if (customDataset.length === 0) {
+      alert('No custom dataset available. Please create one first.');
+      return;
+    }
+    setIsUsingCustomDataset(true);
+    handleReset();
+  };
+
+  const handleDownloadCustomDataset = () => {
+    if (customDataset.length === 0) {
+      alert('No custom dataset available to download.');
+      return;
+    }
+
+    const dataStr = JSON.stringify(customDataset, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `custom-${dataset}-dataset.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportTrainedModel = async () => {
+    if (!trainerRef.current) return;
+  
+    const modelData = JSON.parse(trainerRef.current.exportNetwork());
+    const datasetToExport = isUsingCustomDataset ? customDataset : getDefaultDataset();
+    const trainingInfo = {
+      learningRate,
+      epochs,
+      architecture: getNetworkArchitecture(dataset),
+      datasetType: dataset,
+      isCustomDataset: isUsingCustomDataset,
+      metrics: trainerRef.current.getPerformanceMetrics()
+    };
+  
+    try {
+      const zipBlob = await createModelExport(
+        modelData,
+        datasetToExport,
+        trainingInfo,
+        dataset
+      );
+  
+      // Download ZIP file
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${dataset}-model-export.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error creating export:', error);
+      // Add error handling UI feedback here
+    }
+  };
+
+  const getDefaultDataset = () => {
+    switch(dataset) {
+      case 'logicGates':
+        return logicGateData.training;
+      case 'fitnessClassification':
+        return fitnessData.training;
+      case 'weatherPrediction':
+        return weatherData.training;
+      default:
+        return [];
+    }
+  };
+
   return (
     <Container className="App">
       <Typography variant="h4" gutterBottom>Neural Network Visualization</Typography>
@@ -311,7 +408,50 @@ function App() {
       
       {dataset && (
         <>
-          <DatasetViewer dataset={dataset} />
+          <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
+            <DatasetViewer 
+              dataset={dataset} 
+              title="Default Dataset"
+            />
+            <CustomDatasetCreator 
+              dataset={dataset}
+              onSaveDataset={handleSaveCustomDataset}
+              minimumRows={10} // Add minimum requirement
+            />
+            {customDataset.length > 0 && (
+              <>
+                <DatasetViewer 
+                  dataset={dataset}
+                  data={customDataset}
+                  title="Custom Dataset"
+                />
+                <Button 
+                  variant="outlined"
+                  onClick={handleDownloadCustomDataset}
+                  startIcon={<DownloadIcon />}
+                >
+                  Download Custom Dataset
+                </Button>
+              </>
+            )}
+          </Box>
+
+          <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2 }}>
+            <Button
+              variant={!isUsingCustomDataset ? "contained" : "outlined"}
+              onClick={handleUseDefaultDataset}
+            >
+              Use Default Dataset
+            </Button>
+            <Button
+              variant={isUsingCustomDataset ? "contained" : "outlined"}
+              onClick={handleUseCustomDataset}
+              disabled={customDataset.length === 0}
+            >
+              Use Custom Dataset
+            </Button>
+          </Box>
+
           <TrainingControls 
             epochs={epochs}
             isTraining={isTraining}
@@ -373,6 +513,21 @@ function App() {
               )}
             </>
           )}
+
+          <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2 }}>
+            <Tooltip title="Download the trained model configuration and dataset in JSON and CSV formats">
+              <span>
+                <Button
+                  variant="contained"
+                  onClick={handleExportTrainedModel}
+                  startIcon={<DownloadIcon />}
+                  disabled={!trainingCompleted}
+                >
+                  Export Trained Model & Dataset
+                </Button>
+              </span>
+            </Tooltip>
+          </Box>
         </>
       )}
     </Container>

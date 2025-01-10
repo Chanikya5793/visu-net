@@ -21,12 +21,20 @@ import { weatherData } from '../models/weatherPrediction/data';
 
 interface DatasetViewerProps {
   dataset: string;
+  data?: any[]; // Optional custom data
+  title?: string; // For distinguishing between default and custom
 }
 
-export const DatasetViewer: React.FC<DatasetViewerProps> = ({ dataset }) => {
-    const [open, setOpen] = React.useState(false);
+export const DatasetViewer: React.FC<DatasetViewerProps> = ({ 
+  dataset,
+  data,
+  title = "Dataset"
+}) => {
+  const [open, setOpen] = React.useState(false);
 
-const getDataset = () => {
+  const getDataset = () => {
+    if (data) return data;
+    
     switch(dataset) {
       case 'logicGates':
         return logicGateData.training;
@@ -50,29 +58,52 @@ const getDataset = () => {
   };
 
   const formatData = (data: any) => {
-    if (dataset === 'logicGates') {
-      return {
-        input1: data.input[0],
-        input2: data.input[1],
-        gateType: getGateType(data.input.slice(2)),
-        output: data.output[0]
-      };
-    } else if (dataset === 'fitnessClassification') {
-      const fitnessLevel = data.output[0] >= 0.66 ? 'Fit' : 
-                          data.output[0] >= 0.33 ? 'Average' : 'Unfit';
-      return {
-        heartRate: getHeartRateRange(data.input[0]),
-        staminaLevel: getStaminaLevel(data.input[2]),
-        bmi: getBMICategory(data.input[1]),
-        fitnessLevel: fitnessLevel
-      };
-    } else {
-      return {
-        temperature: (data.input[0] * 50).toFixed(1),
-        humidity: (data.input[1] * 100).toFixed(1),
-        cloudCover: (data.input[2] * 100).toFixed(1),
-        rainProbability: (data.output[0] * 100).toFixed(1) + '%'
-      };
+    try {
+      if (dataset === 'logicGates') {
+        // Handle both custom and default data formats
+        if (data.input && Array.isArray(data.input)) {
+          return {
+            input1: data.input[0],
+            input2: data.input[1],
+            gateType: getGateType(data.input.slice(2)),
+            output: data.output[0]
+          };
+        } else {
+          return {
+            input1: data.input1,
+            input2: data.input2,
+            gateType: data.gateType,
+            output: data.output
+          };
+        }
+      } else if (dataset === 'fitnessClassification') {
+        if (data.input && Array.isArray(data.input)) {
+          const fitnessLevel = data.output[0] >= 0.66 ? 'Fit' : 
+                              data.output[0] >= 0.33 ? 'Average' : 'Unfit';
+          return {
+            heartRate: getHeartRateRange(data.input[0]),
+            staminaLevel: getStaminaLevel(data.input[2]),
+            bmi: getBMICategory(data.input[1]),
+            fitnessLevel: fitnessLevel
+          };
+        } else {
+          return data; // Return custom data as is
+        }
+      } else {
+        if (data.input && Array.isArray(data.input)) {
+          return {
+            temperature: (data.input[0] * 50).toFixed(1),
+            humidity: (data.input[1] * 100).toFixed(1),
+            cloudCover: (data.input[2] * 100).toFixed(1),
+            rainProbability: (data.output[0] * 100).toFixed(1) + '%'
+          };
+        } else {
+          return data; // Return custom data as is
+        }
+      }
+    } catch (error) {
+      console.error('Error formatting data:', error);
+      return {};
     }
   };
 
@@ -113,7 +144,7 @@ const getDataset = () => {
         onClick={() => setOpen(true)}
         sx={{ mt: 2 }}
       >
-        View Dataset
+        View {title}
       </Button>
 
       <Dialog

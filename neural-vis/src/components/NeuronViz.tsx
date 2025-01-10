@@ -2,15 +2,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { 
   Box, useTheme, Paper, Typography, Button, Slider,
-  Dialog, DialogTitle, DialogContent, DialogActions
+  Dialog, DialogTitle, DialogContent, DialogActions, Divider, Tooltip
 } from '@mui/material';
+import InfoIcon from '@mui/icons-material/Info';
 import {
   ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   TooltipProps
 } from 'recharts';
 
@@ -283,7 +284,7 @@ const WeightDistribution: React.FC<WeightDistributionProps> = ({ weights }) => {
             <YAxis 
               label={{ value: 'Frequency', angle: -90, position: 'insideLeft' }}
             />
-            <Tooltip<number, string>
+            <RechartsTooltip<number, string>
               cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
               content={({ active, payload, label }: TooltipProps<number, string>) => {
                 if (active && payload && payload.length) {
@@ -292,7 +293,7 @@ const WeightDistribution: React.FC<WeightDistributionProps> = ({ weights }) => {
                       backgroundColor: '#fff', 
                       padding: '10px', 
                       border: '1px solid #ccc' 
-                    }}>
+                 }}>
                       <p>{`Weight: ${label}`}</p>
                       <p>{`Frequency: ${payload[0].value}`}</p>
                     </div>
@@ -476,11 +477,13 @@ const ErrorSurfaceViz: React.FC<{
   );
 };
 
-const NeuronColorLegend: React.FC<{ dataset: string; layerIndex: number; totalLayers: number }> = ({ 
-  dataset, 
-  layerIndex, 
-  totalLayers 
-}) => {
+// Update the NeuronColorLegend component
+const NeuronColorLegend: React.FC<{ 
+  dataset: string;
+  layers: number[];  // Add layers prop
+}> = ({ dataset, layers }) => {
+  const [open, setOpen] = useState(false);
+
   const getLayerColor = (layerIndex: number, totalLayers: number) => {
     const colors = {
       input: '#ff9800',    // Orange
@@ -501,11 +504,6 @@ const NeuronColorLegend: React.FC<{ dataset: string; layerIndex: number; totalLa
     }
   };
 
-  const baseColor = getLayerColor(layerIndex, totalLayers);
-  const r = parseInt(baseColor.slice(1, 3), 16);
-  const g = parseInt(baseColor.slice(3, 5), 16);
-  const b = parseInt(baseColor.slice(5, 7), 16);
-
   const getActivationLabel = (value: number) => {
     switch(dataset) {
       case 'logicGates':
@@ -521,39 +519,71 @@ const NeuronColorLegend: React.FC<{ dataset: string; layerIndex: number; totalLa
     }
   };
 
-  const steps = Array.from({ length: 11 }, (_, i) => i / 10); // 0.0 to 1.0 in 0.1 steps
+  const steps = Array.from({ length: 11 }, (_, i) => i / 10);
 
   return (
-    <Paper sx={{ p: 2, mt: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Neuron Color Guide - {layerIndex === 0 ? 'Input' : 
-                            layerIndex === totalLayers - 1 ? 'Output' : 
-                            `Hidden Layer ${layerIndex}`}
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {steps.map(value => (
-          <Box 
-            key={value} 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1,
-              minWidth: '150px'
-            }}
-          >
-            <Box sx={{ 
-              width: 20, 
-              height: 20, 
-              borderRadius: '50%', 
-              background: `rgba(${r}, ${g}, ${b}, ${0.3 + value * 0.7})`
-            }} />
-            <Typography variant="caption">
-              {getActivationLabel(value)}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-    </Paper>
+    <>
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={() => setOpen(true)}
+        startIcon={<InfoIcon />}
+      >
+        Neuron Color Guide
+      </Button>
+
+      <Dialog 
+        open={open} 
+        onClose={() => setOpen(false)}
+        maxWidth="md"
+      >
+        <DialogTitle>Neuron Color Guide</DialogTitle>
+        <DialogContent>
+          {layers.map((_, layerIndex) => {
+            const baseColor = getLayerColor(layerIndex, layers.length);
+            const r = parseInt(baseColor.slice(1, 3), 16);
+            const g = parseInt(baseColor.slice(3, 5), 16);
+            const b = parseInt(baseColor.slice(5, 7), 16);
+
+            return (
+              <Box key={layerIndex} sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  {layerIndex === 0 ? 'Input Layer' : 
+                   layerIndex === layers.length - 1 ? 'Output Layer' : 
+                   `Hidden Layer ${layerIndex}`}
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {steps.map(value => (
+                    <Box 
+                      key={value} 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        minWidth: '150px'
+                      }}
+                    >
+                      <Box sx={{ 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: '50%', 
+                        background: `rgba(${r}, ${g}, ${b}, ${0.3 + value * 0.7})`
+                      }} />
+                      <Typography variant="caption">
+                        {getActivationLabel(value)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            );
+          })}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
@@ -593,6 +623,12 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState('');
   const [showGradients, setShowGradients] = useState(false);
+  const [editedLayers, setEditedLayers] = useState(layers);
+
+  // Add useEffect to update editedLayers when layers prop changes
+  useEffect(() => {
+    setEditedLayers(layers);
+  }, [layers]);
 
   // Visual constants
   const width = 800;
@@ -850,13 +886,15 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
             return (
               <g key={`neuron-${layerIndex}-${neuronIndex}`}>
                   <circle
-                    cx={(layerIndex + 1) * layerSpacing}
-                    cy={(neuronIndex + 1) * verticalSpacing}
-                    r={neuronRadius}
-                    fill={getNeuronColor(layerIndex, neuronIndex)}
-                    stroke={theme.palette.grey[400]}
-                    style={{ transition: 'all 0.3s ease-in-out' }}
-                  >
+                      cx={(layerIndex + 1) * layerSpacing}
+                      cy={(neuronIndex + 1) * verticalSpacing}
+                      r={neuronRadius}
+                      fill={getNeuronColor(layerIndex, neuronIndex)}
+                      stroke={theme.palette.grey[400]}
+                      style={{ transition: 'all 0.3s ease-in-out' }}
+                      onClick={() => handleNeuronClick(layerIndex, neuronIndex)}
+                      cursor="pointer"
+                    >
                   <title>
                     {`Layer ${layerIndex}, Neuron ${neuronIndex}
                     Activation: ${(activations?.[layerIndex]?.[neuronIndex] || 0).toFixed(3)}
@@ -941,69 +979,142 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
     }
   };
 
+  const handleLayerChange = (index: number, value: number) => {
+    const newLayers = [...editedLayers];
+    newLayers[index] = value;
+    setEditedLayers(newLayers);
+  };
+
+  const handleApplyArchitecture = () => {
+    onArchitectureChange?.(editedLayers);
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h6" gutterBottom>Network Architecture</Typography>
       
-      {/* Network Controls */}
-      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => setShowBackprop(!showBackprop)}
-          sx={{ mr: 1 }}
-        >
-          {showBackprop ? 'Hide' : 'Show'} Backpropagation
-        </Button>
-        
-        {/* Learning Rate Control */}
-        {onLearningRateChange && (
-          <LearningRateControl
-            learningRate={learningRate}
-            onChange={onLearningRateChange}
-            disabled={!isTraining} // Disabled when not training
-          />
+      {/* Network Controls Panel */}
+      <Box sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+        {/* Architecture Controls */}
+        {onArchitectureChange && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>Layer Architecture</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Modify neurons in hidden layers.  Changes reset training.  Cannot be modified during training.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              {layers.map((neurons, idx) => (
+                <Box key={idx} sx={{ minWidth: 120 }}>
+                  <Typography variant="caption">
+                    {idx === 0 ? 'Input Layer' : 
+                    idx === layers.length - 1 ? 'Output Layer' : 
+                    `Hidden Layer ${idx}`}
+                  </Typography>
+                  <Slider
+                    value={editedLayers[idx]}  // Use editedLayers instead of layers
+                    onChange={(_, value) => {
+                      const newLayers = [...editedLayers];
+                      newLayers[idx] = value as number;
+                      setEditedLayers(newLayers);
+                    }}
+                    min={1}
+                    max={10}
+                    step={1}
+                    marks
+                    disabled={isTraining || idx === 0 || idx === layers.length - 1}
+                    valueLabelDisplay="auto"
+                  />
+                </Box>
+              ))}
+              <Button 
+                variant="contained" 
+                onClick={() => {
+                  onArchitectureChange(editedLayers);
+                }}
+                disabled={isTraining}
+              >
+                Apply Architecture
+              </Button>
+            </Box>
+          </Box>
         )}
-        
-        {/* Export/Import Controls */}
-        <Box sx={{ mx: 2 }}>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleExport}
-            sx={{ mr: 1 }}
-          >
-            Export Network
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setShowImportDialog(true)}
-          >
-            Import Network
-          </Button>
-        </Box>
 
-        {/* Training Speed Control */}
-        {onTrainingSpeedChange && (
-          <TrainingSpeedControl
-            speed={trainingSpeed}
-            onChange={onTrainingSpeedChange}
-            disabled={!isTraining} // Disabled when not training
-          />
-        )}
-      </Box>
+        <Divider sx={{ my: 2 }} />
 
-      {/* Add color legends for each layer */}
-      <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {layers.map((_, layerIndex) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          {/* Backpropagation Button with Tooltip */}
+          <Tooltip 
+            title="Visualize how errors propagate backward through the network during training"
+            placement="top"
+          >
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowBackprop(!showBackprop)}
+              sx={{ mr: 1 }}
+            >
+              {showBackprop ? 'Hide' : 'Show'} Backpropagation
+            </Button>
+          </Tooltip>
+          
+          {/* Gradients Button with Tooltip */}
+          <Tooltip 
+            title="Show the strength and direction of weight updates during training"
+            placement="top"
+          >
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowGradients(!showGradients)}
+              sx={{ mr: 1 }}
+            >
+              {showGradients ? 'Hide' : 'Show'} Gradients
+            </Button>
+          </Tooltip>
+
+          {/* Rest of the controls... */}
+          {onLearningRateChange && (
+            <LearningRateControl
+              learningRate={learningRate}
+              onChange={onLearningRateChange}
+              disabled={!isTraining}
+            />
+          )}
+          
+          {/* Rest of the controls... */}
+          {onTrainingSpeedChange && (
+            <TrainingSpeedControl
+              speed={trainingSpeed}
+              onChange={onTrainingSpeedChange}
+              disabled={!isTraining}
+            />
+          )}
+
+          {/* Export/Import Controls */}
+          <Box>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleExport}
+              sx={{ mr: 1 }}
+            >
+              Export Network
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowImportDialog(true)}
+            >
+              Import Network
+            </Button>
+          </Box>
+
+          {/* Add the single color guide button */}
           <NeuronColorLegend 
-            key={layerIndex}
             dataset={dataset}
-            layerIndex={layerIndex}
-            totalLayers={layers.length}
+            layers={layers}
           />
-        ))}
+        </Box>
       </Box>
 
       {/* Network Visualization */}

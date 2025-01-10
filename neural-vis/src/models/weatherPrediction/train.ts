@@ -15,11 +15,13 @@ export class WeatherTrainer implements ITrainer {
   private biases: number[][] = [];
   private gradients: number[][] = [];
   private learningRate: number = 0.01;
-  
-  constructor() {
+  private trainingData: any[];
+
+  constructor(customDataset?: any[]) {
+    this.trainingData = customDataset || weatherData.training;
     this.initNetwork();
     // Initialize with valid training options
-    this.network.train(weatherData.training, {
+    this.network.train(this.trainingData, {
       iterations: 1,
       errorThresh: 0.01,
       log: false,
@@ -54,9 +56,9 @@ export class WeatherTrainer implements ITrainer {
 
       this.isTraining = true;
 
-      await this.network.trainAsync(weatherData.training, {
+      await this.network.trainAsync(this.trainingData, {
         iterations: this.totalEpochs, // Train for all epochs at once
-        errorThresh: 0.0000000001,
+        errorThresh: 0.0000000000000000000000000000000000000000000001,
         log: true,
         logPeriod: 1,
         callback: (stats: { iterations: number, error: number }) => {
@@ -132,7 +134,7 @@ export class WeatherTrainer implements ITrainer {
     this.isPaused = false;
     this.initNetwork();
     // Initialize with valid training options
-    this.network.train(weatherData.training, {
+    this.network.train(this.trainingData, {
       iterations: 1,
       errorThresh: 0.01, // Changed from 1 to a valid value
       log: false
@@ -245,7 +247,8 @@ export class WeatherTrainer implements ITrainer {
   }
 
   getPerformanceMetrics(): PerformanceMetrics {
-    if (!this.isTraining && this.currentEpoch === 0) {
+    // Check if network is initialized
+    if (!this.network || !this.isTraining && this.currentEpoch === 0) {
       return {
         accuracy: 0,
         precision: 0,
@@ -254,29 +257,43 @@ export class WeatherTrainer implements ITrainer {
       };
     }
 
-    // Calculate metrics using test data
-    let correct = 0;
-    let truePositives = 0;
-    let falsePositives = 0;
-    let falseNegatives = 0;
+    try {
+      // Calculate metrics using test data
+      let correct = 0;
+      let truePositives = 0;
+      let falsePositives = 0;
+      let falseNegatives = 0;
 
-    weatherData.training.forEach(data => {
-      const prediction = this.predict(data.input);
-      const expected = data.output[0];
-      const predicted = prediction[0] > 0.5 ? 1 : 0;
+      this.trainingData.forEach(data => {
+        try {
+          const prediction = this.predict(data.input);
+          const expected = data.output[0];
+          const predicted = prediction[0] > 0.5 ? 1 : 0;
 
-      if (predicted === expected) correct++;
-      if (predicted === 1 && expected === 1) truePositives++;
-      if (predicted === 1 && expected === 0) falsePositives++;
-      if (predicted === 0 && expected === 1) falseNegatives++;
-    });
+          if (predicted === expected) correct++;
+          if (predicted === 1 && expected === 1) truePositives++;
+          if (predicted === 1 && expected === 0) falsePositives++;
+          if (predicted === 0 && expected === 1) falseNegatives++;
+        } catch (error) {
+          console.error('Error predicting:', error);
+        }
+      });
 
-    const total = weatherData.training.length;
-    const accuracy = correct / total;
-    const precision = truePositives / (truePositives + falsePositives) || 0;
-    const recall = truePositives / (truePositives + falseNegatives) || 0;
-    const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
+      const total = this.trainingData.length;
+      const accuracy = correct / total;
+      const precision = truePositives / (truePositives + falsePositives) || 0;
+      const recall = truePositives / (truePositives + falseNegatives) || 0;
+      const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
 
-    return { accuracy, precision, recall, f1Score };
+      return { accuracy, precision, recall, f1Score };
+    } catch (error) {
+      console.error('Error calculating metrics:', error);
+      return {
+        accuracy: 0,
+        precision: 0,
+        recall: 0,
+        f1Score: 0
+      };
+    }
   }
 }
