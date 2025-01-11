@@ -16,30 +16,31 @@ A powerful Neural Network Visualization Tool built with React and TypeScript tha
 ## 🌟 Features
 
 - 🧠 **Interactive Neural Network Architecture**
+
   - Drag-and-drop network design
   - Real-time architecture modification
   - Intuitive layer configuration
-
 - 📊 **Advanced Visualizations**
+
   - Real-time training visualization
   - Weight distribution analysis
   - Activation pattern visualization
   - Error surface visualization
   - Loss landscape exploration
-
 - 🎛️ **Comprehensive Controls**
+
   - Customizable training speed
   - Layer-wise parameter tuning
   - Batch size adjustment
   - Learning rate scheduling
-
 - 📈 **Performance Analytics**
+
   - Real-time metrics tracking
   - Custom metric definitions
   - Performance comparison tools
   - Training history logs
-
 - 💾 **Data Management**
+
   - Import/Export functionality
   - Model checkpointing
   - Training state persistence
@@ -54,103 +55,139 @@ A powerful Neural Network Visualization Tool built with React and TypeScript tha
 - Modern web browser (Chrome, Firefox, or Safari recommended)
 
 ### One-Line Installation (Unix/macOS/Linux)
-```bash
-git clone https://github.com/yourusername/visu-net.git && cd visu-net/neural-vis && npm install && npm start
+```bash copy
+git clone https://github.com/Chanakya5793/visu-net.git && cd visu-net/neural-vis && npm install && npm start
 ```
 
 ### Step-by-Step Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/visu-net.git
+```bash copy
+git clone https://github.com/Chanakya5793/visu-net.git
 cd visu-net/neural-vis
 ```
 
 2. Install dependencies:
 
 ### Using npm (recommended for all platforms):
-```bash
+```bash copy
 npm install
 ```
 
 ### Alternative installation using requirements.txt:
 
 #### On macOS/Linux:
-```bash
-cat requirements.txt | xargs npm install
-# or
-while read p; do npm install $p; done < requirements.txt
+```bash copy
+# Navigate to the neural-vis directory first
+cd visu-net/neural-vis
+
+# Install all dependencies from package.json
+npm install
+
+# Or if you prefer yarn
+yarn install
 ```
 
 #### On Windows (PowerShell):
-```powershell
-Get-Content requirements.txt | ForEach-Object { npm install $_ }
-# or
-foreach($line in Get-Content requirements.txt) { npm install $line }
+```powershell copy
+# Navigate to the neural-vis directory first
+cd visu-net\neural-vis
+
+# Install all dependencies from package.json
+npm install
+
+# Or if you prefer yarn
+yarn install
 ```
 
 #### On Windows (Command Prompt):
-```cmd
-for /F "tokens=*" %A in (requirements.txt) do npm install %A
+```cmd copy
+# Navigate to the neural-vis directory first
+cd visu-net\neural-vis
+
+# Install all dependencies from package.json
+npm install
+
+# Or if you prefer yarn
+yarn install
 ```
+
+Note: The project uses `package.json` for dependency management, not `requirements.txt`. All required dependencies are listed in `package.json` and will be installed automatically with `npm install` or `yarn install`.
 
 ## Platform-Specific Setup
 
 ### Windows
+
 1. Install Node.js and npm from [official Node.js website](https://nodejs.org/)
 2. Open PowerShell or Command Prompt as Administrator
 3. Navigate to the project directory:
+
 ```powershell
 cd path\to\visu-net\neural-vis
 ```
+
 4. Install dependencies using one of the methods above
 5. Start the development server:
+
 ```powershell
 npm start
 ```
 
 ### macOS
+
 1. Install Node.js and npm using Homebrew:
+
 ```bash
 brew install node
 ```
+
 2. Open Terminal
 3. Navigate to the project directory:
+
 ```bash
 cd path/to/visu-net/neural-vis
 ```
+
 4. Install dependencies using one of the methods above
 5. Start the development server:
+
 ```bash
 npm start
 ```
 
 ### Linux
+
 1. Install Node.js and npm using your distribution's package manager:
 
 For Ubuntu/Debian:
+
 ```bash
 sudo apt update
 sudo apt install nodejs npm
 ```
 
 For Fedora:
+
 ```bash
 sudo dnf install nodejs npm
 ```
 
 For Arch Linux:
+
 ```bash
 sudo pacman -S nodejs npm
 ```
 
 2. Open Terminal
 3. Navigate to the project directory:
+
 ```bash
 cd path/to/visu-net/neural-vis
 ```
+
 4. Install dependencies using one of the methods above
 5. Start the development server:
+
 ```bash
 npm start
 ```
@@ -160,6 +197,7 @@ npm start
 You can view the contents of requirements.txt using different commands based on your operating system:
 
 ### Windows (PowerShell):
+
 ```powershell
 Get-Content requirements.txt
 # or
@@ -167,11 +205,13 @@ type requirements.txt
 ```
 
 ### Windows (Command Prompt):
+
 ```cmd
 type requirements.txt
 ```
 
 ### macOS/Linux:
+
 ```bash
 cat requirements.txt
 # or
@@ -218,8 +258,7 @@ For a complete list of dependencies and their exact versions, see `requirements.
 ## Development
 
 ### Available Scripts
-
-```bash
+```bash copy
 # Start development server
 npm start
 
@@ -229,7 +268,7 @@ npm test
 # Build for production
 npm run build
 
-# Run linter
+# Run linting
 npm run lint
 
 # Format code
@@ -237,34 +276,35 @@ npm run format
 ```
 
 ### Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
+```env copy
 REACT_APP_API_URL=your_api_url
 REACT_APP_DEBUG_MODE=true
 REACT_APP_VERSION=$npm_package_version
 ```
 
 ### Network Visualization
+
 - Use the `NetworkVisualization` component to view the neural network architecture
 - Hover over neurons to see activation values
 - Click on connections to view weight information
 - Use the zoom and pan controls to navigate larger networks
 
 ### Training Controls
+
 - Adjust training speed using the speed control slider
 - Start/pause training using the control panel
 - Monitor real-time performance metrics during training
 - Use the architecture controls to modify network structure
 
 ### Performance Analysis
+
 - View loss and accuracy graphs in real-time
 - Analyze weight distributions across layers
 - Examine activation patterns for different inputs
 - Explore the error surface visualization
 
 ### Import/Export
+
 - Import existing network architectures through the Import Dialog
 - Export trained models for later use
 - Save and load training configurations
@@ -290,6 +330,7 @@ neural-vis/
 ## Dependencies
 
 Main dependencies include:
+
 - React 18
 - Material-UI (MUI) v6
 - Brain.js - Neural network implementation
@@ -303,16 +344,17 @@ For a complete list of dependencies, see `package.json`.
 ### Common Issues
 
 1. **Development Server Issues**
+
    - Clear npm cache: `npm cache clean --force`
    - Delete node_modules: `rm -rf node_modules && npm install`
    - Check port conflicts: `lsof -i :3000`
-
 2. **Visualization Performance**
+
    - Reduce network size for complex architectures
    - Enable hardware acceleration in browser
    - Check browser console for warnings
-
 3. **Memory Issues**
+
    - Increase Node.js memory limit: `NODE_OPTIONS=--max_old_space_size=4096`
    - Clear browser cache and reload
    - Monitor memory usage in task manager
@@ -320,22 +362,24 @@ For a complete list of dependencies, see `package.json`.
 ## Contributing
 
 ### Development Process
+
 1. Fork the repository
 2. Create your feature branch
    ```bash
-   git checkout -b feature/amazing-feature
+   git checkout -b my-feature
    ```
 3. Commit your changes
    ```bash
-   git commit -m 'Add some amazing feature'
+   git commit -m 'Add my feature'
    ```
 4. Push to the branch
    ```bash
-   git push origin feature/amazing-feature
+   git push origin my-feature
    ```
 5. Open a Pull Request
 
 ### Contribution Guidelines
+
 - Fork the repository
 - Create your feature branch
 - Commit your changes
@@ -365,16 +409,17 @@ For more details about our dependencies' licenses, check the ADDITIONAL ATTRIBUT
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/visu-net&type=Date)](https://star-history.com/#yourusername/visu-net&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=Chanakya5793/visu-net&type=Date)](https://star-history.com/#Chanakya5793/visu-net&Date)
 
 ## 📬 Contact
 
-- Report bugs: [Issue Tracker](https://github.com/yourusername/visu-net/issues)
-- Feature requests: [Discussions](https://github.com/yourusername/visu-net/discussions)
+- Report bugs: [Issue Tracker](https://github.com/Chanakya5793/visu-net/issues)
+- Feature requests: [Discussions](https://github.com/Chanakya5793/visu-net/discussions)
 - Email: your.email@example.com
 - Twitter: [@visu_net](https://twitter.com/visu_net)
 
 ---
+
 <div align="center">
   Made with ❤️ by the Visu-Net Team
 </div>
