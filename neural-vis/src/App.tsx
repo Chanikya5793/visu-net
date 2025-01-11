@@ -3,6 +3,7 @@ import { Box, Button, Container, SelectChangeEvent, Tooltip, Typography } from '
 import { useRef, useState } from 'react';
 import './App.css';
 import { CustomDatasetCreator } from './components/CustomDatasetCreator';
+import { CustomDatasetUploader } from './components/CustomDatasetUploader';
 import { DatasetSelector } from './components/DatasetSelector';
 import { DatasetViewer } from './components/DatasetViewer';
 import { MetricsGraph } from './components/MetricsGraph';
@@ -410,27 +411,38 @@ function App() {
               dataset={dataset} 
               title="Default Dataset"
             />
-            <CustomDatasetCreator 
+           {/* <Button 
+              variant="outlined"
+              onClick={handleUseDefaultDataset}
+              disabled={!isUsingCustomDataset}
+            >
+              Use Default Dataset
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleUseCustomDataset}
+              disabled={isUsingCustomDataset || customDataset.length === 0}
+            >
+              Use Custom Dataset
+            </Button>*/}
+            <Button
+              variant="outlined"
+              onClick={handleDownloadCustomDataset}
+              disabled={customDataset.length === 0}
+            >
+              Download Custom Dataset
+            </Button>
+            
+            <CustomDatasetUploader
+              dataset={dataset}
+              onUploadDataset={handleSaveCustomDataset}
+            />
+            
+            <CustomDatasetCreator
               dataset={dataset}
               onSaveDataset={handleSaveCustomDataset}
-              minimumRows={10} // Add minimum requirement
+              minimumRows={10}
             />
-            {customDataset.length > 0 && (
-              <>
-                <DatasetViewer 
-                  dataset={dataset}
-                  data={customDataset}
-                  title="Custom Dataset"
-                />
-                <Button 
-                  variant="outlined"
-                  onClick={handleDownloadCustomDataset}
-                  startIcon={<DownloadIcon />}
-                >
-                  Download Custom Dataset
-                </Button>
-              </>
-            )}
           </Box>
 
           <Box sx={{ mt: 2, mb: 2 }}>
