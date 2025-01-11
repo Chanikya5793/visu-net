@@ -13,7 +13,7 @@
  * 3. ActivationPatterns - Visualization of neuron activations per layer
  * 4. WeightDistribution - Distribution chart of network weights
  * 
- * Note: Performance Metrics and Error Surface components are commented out 
+ * Note: Performance Metrics and Error Surface components are commented out
  * as they are handled by the parent NeuronViz component.
  */
 
@@ -174,12 +174,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
         Array.from({ length: neuronsCount }).map((_, toIdx) => {
+          const layerWeights = weights[layerIndex - 1];
+          const weight = layerWeights ? 
+            (layerIndex === 1 ? layerWeights[toIdx]?.[fromIdx] : layerWeights[fromIdx]?.[toIdx]) || 0 
+            : 0;
           const fromActivation = activations[layerIndex - 1]?.[fromIdx] || 0;
           const toActivation = activations[layerIndex]?.[toIdx] || 0;
-          const weight = weights[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
           const gradient = fromActivation * toActivation * weight;
 
-          // Get positions using the helper function
           const fromPos = getNeuronPosition(layerIndex - 1, fromIdx);
           const toPos = getNeuronPosition(layerIndex, toIdx);
 
@@ -198,6 +200,43 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     });
   };
 
+  const getConnectionStrength = (
+    layerIndex: number,
+    fromActivation: number,
+    toActivation: number,
+    weight: number
+  ) => {
+    const isInputLayer = layerIndex === 1;
+    // Simplified connection strength calculation
+    return isInputLayer ? 
+      Math.abs(weight) : // For input layer, use weight directly
+      Math.abs(weight * fromActivation); // For other layers, use weight * activation
+  };
+
+  const getConnectionOpacity = (
+    layerIndex: number,
+    connectionStrength: number
+  ) => {
+    const isInputLayer = layerIndex === 1;
+    // Higher base opacity for input layer
+    const baseOpacity = isInputLayer ? 0.8 : 0.5;
+    return baseOpacity + Math.min(connectionStrength, 1) * 0.2;
+  };
+
+  const getConnectionWidth = (
+    layerIndex: number,
+    weight: number
+  ) => {
+    const isInputLayer = layerIndex === 1;
+    // Simplified width calculation
+    const baseWidth = isInputLayer ? 2 : 1;
+    return Math.max(baseWidth, Math.abs(weight) * 3);
+  };
+
+  const getActivityThreshold = (layerIndex: number) => {
+    return layerIndex === 1 ? 0.1 : 0.3;
+  };
+
   const renderConnections = () => (
     <g className="connections">
       {layers.map((neuronsCount, layerIndex) => {
@@ -206,77 +245,62 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
         return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
           Array.from({ length: neuronsCount }).map((_, toIdx) => {
-            const weight = weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
+            // Access weights correctly for each layer
+            const layerWeights = weights?.[layerIndex - 1];
+            const weight = layerWeights ? 
+              (layerIndex === 1 ? layerWeights[toIdx]?.[fromIdx] : layerWeights[fromIdx]?.[toIdx]) || 0 
+              : 0;
             const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
             const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
             
-            // Get positions using the helper function
             const fromPos = getNeuronPosition(layerIndex - 1, fromIdx);
             const toPos = getNeuronPosition(layerIndex, toIdx);
             
-            // For input layer, use direct activation values
             const isInputLayer = layerIndex === 1;
-            const connectionStrength = isInputLayer ? 
-              Math.abs(fromActivation * toActivation * weight) : // For input layer, use all three values
-              Math.abs(weight * fromActivation); // For other layers, use weight * activation
+            const connectionStrength = getConnectionStrength(layerIndex, fromActivation, toActivation, weight);
+            const isActive = connectionStrength > getActivityThreshold(layerIndex);
+            const connectionOpacity = getConnectionOpacity(layerIndex, connectionStrength);
+            const strokeWidth = getConnectionWidth(layerIndex, weight);
             
-            // More sensitive thresholds for input layer
-            const activityThreshold = isInputLayer ? 0.001 : 0.3;
-            const isActive = connectionStrength > activityThreshold;
-            
-            // Input layer connections should be more prominent
-            const baseOpacity = isInputLayer ? 0.7 : 0.4;
-            const connectionOpacity = baseOpacity + Math.min(connectionStrength, 1) * 0.3;
-            
-            // Dynamic stroke width based on activity
-            const baseWidth = isInputLayer ? 2 : 1.2;
-            const widthMultiplier = isInputLayer ? 4 : 2.5;
-            const strokeWidth = Math.max(baseWidth, Math.abs(weight) * widthMultiplier);
-            
-            // Calculate weight label position with offset to prevent overlapping
+            // Keep existing label positioning logic
             const midX = (fromPos.x + toPos.x) / 2;
             const midY = (fromPos.y + toPos.y) / 2;
             const dx = toPos.x - fromPos.x;
             const dy = toPos.y - fromPos.y;
-            const angle = Math.atan2(dy, dx);
-            const lineLength = Math.sqrt(dx * dx + dy * dy);
             
-            // Position labels at different points along the line with dynamic shuffling
+            // Position labels at different points along the line
             const getShuffledPosition = (layerIndex: number, fromIdx: number, toIdx: number) => {
-              // Create a unique but consistent pattern based on indices
-              const patternSeed = (fromIdx * 7 + toIdx * 13) % 5;  // Use prime numbers for better distribution
+              const patternSeed = (fromIdx * 7 + toIdx * 13) % 5;
               
               if (isInputLayer) {
-                // Input layer: Spread more evenly
                 switch(patternSeed) {
-                  case 0: return 0.3;  // Near start
-                  case 1: return 0.4;  // Between start and middle
-                  case 2: return 0.5;  // Middle
-                  case 3: return 0.6;  // Between middle and end
-                  case 4: return 0.7;  // Near end
+                  case 0: return 0.3;
+                  case 1: return 0.4;
+                  case 2: return 0.5;
+                  case 3: return 0.6;
+                  case 4: return 0.7;
                   default: return 0.5;
                 }
               } else {
-                // Hidden layers: Closer to source with more variation
                 switch(patternSeed) {
-                  case 0: return 0.15;  // Very close to start
-                  case 1: return 0.25;  // Close to start
-                  case 2: return 0.30;  // Bit further
-                  case 3: return 0.60;   // Between very close and close
-                  case 4: return 0.85;   // Between close and bit further
+                  case 0: return 0.15;
+                  case 1: return 0.25;
+                  case 2: return 0.30;
+                  case 3: return 0.60;
+                  case 4: return 0.85;
                   default: return 0.25;
                 }
               }
             };
-
+            
             const labelPosition = getShuffledPosition(layerIndex, fromIdx, toIdx);
             const labelX = fromPos.x + dx * labelPosition;
             const labelY = fromPos.y + dy * labelPosition;
             
-            // Color based on activity for input layer, weight sign for others
+            // Color based on weight value and layer
             const connectionColor = isInputLayer ?
-              (connectionStrength > 0.5 ? theme.palette.primary.main : getLayerColor(0, layers.length)) :
-              (isActive ? (weight > 0 ? theme.palette.success.main : theme.palette.error.main) : theme.palette.grey[800]);
+              (weight > 0 ? theme.palette.primary.main : theme.palette.error.main) :
+              (weight > 0 ? theme.palette.success.main : theme.palette.error.main);
             
             return (
               <g key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}>
@@ -291,35 +315,27 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 >
                   <animate
                     attributeName="opacity"
-                    values={`${connectionOpacity};${Math.max(baseOpacity * 0.8, connectionOpacity * 0.5)};${connectionOpacity}`}
-                    dur={isInputLayer ? "0.6s" : "1.5s"}
+                    values={`${connectionOpacity};${connectionOpacity * 0.7};${connectionOpacity}`}
+                    dur="0.6s"
                     repeatCount="indefinite"
                     begin={`${(fromIdx + toIdx) * 0.1}s`}
                   />
-                  {isActive && (
-                    <animate
-                      attributeName="strokeWidth"
-                      values={`${strokeWidth};${strokeWidth * 1.2};${strokeWidth}`}
-                      dur={isInputLayer ? "0.6s" : "1.5s"}
-                      repeatCount="indefinite"
-                      begin={`${(fromIdx + toIdx) * 0.1}s`}
-                    />
-                  )}
                 </line>
-                {/* Show all weights with distributed positions */}
                 <text
                   x={labelX}
                   y={labelY}
                   textAnchor="middle"
                   fill={theme.palette.text.primary}
                   fontSize={10}
-                  dy="-2"
                   fontWeight="bold"
                 >
                   {weight.toFixed(2)}
                 </text>
                 <title>
+                  Layer: {layerIndex} ({isInputLayer ? 'Input' : 'Hidden'})
                   Weight: {weight.toFixed(4)}
+                  From: Neuron {fromIdx}
+                  To: Neuron {toIdx}
                 </title>
               </g>
             );
@@ -461,8 +477,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           fontWeight="bold"
         >
           {layerIndex === 0 ? 'Input Layer' : 
-           layerIndex === layers.length - 1 ? 'Output Layer' : 
-           `Hidden Layer ${layerIndex}`}
+          layerIndex === layers.length - 1 ? 'Output Layer' : 
+            `Hidden Layer ${layerIndex}`}
         </text>
       </g>
     ));
@@ -487,9 +503,11 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         </svg>
       </Box>
 
-      {/* Statistics Section */}
+      {/* Layer Statistics Section */}
+      {renderLayerStats()}
+
+      {/* Rest of the components */}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 3 }}>
-        {/* Network Stats */}
         {weights && biases && learningRate !== undefined && (
           <NetworkStats 
             weights={weights} 
@@ -498,7 +516,6 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           />
         )}
         
-        {/* Activation Patterns */}
         {activations && layers.map((_, layerIndex) => (
           <ActivationPatterns
             key={layerIndex}
@@ -508,70 +525,10 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           />
         ))}
 
-        {/* Weight Distribution */}
         {weights && (
           <WeightDistribution weights={weights} />
         )}
       </Box>
-
-      {/* Performance Metrics - Commented out (handled by NeuronViz) */}
-      {/* {performanceMetrics && (
-        <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Performance Metrics</Typography>
-            <InfoTooltip
-              title="Performance Metrics"
-              description={
-                <Box>
-                  <Typography variant="body2" gutterBottom>
-                    Key metrics showing network performance:
-                  </Typography>
-                  <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
-                    <li>Accuracy: Percentage of correct predictions overall</li>
-                    <li>Precision: True positives / (True + False positives)</li>
-                    <li>Recall: True positives / (True positives + False negatives)</li>
-                    <li>F1 Score: Harmonic mean of precision and recall</li>
-                  </Typography>
-                </Box>
-              }
-            />
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Box sx={{ textAlign: 'center', flex: 1 }}>
-              <Typography variant="subtitle2">Accuracy</Typography>
-              <Typography variant="h6">{performanceMetrics.accuracy.toFixed(1)}%</Typography>
-            </Box>
-            <Box sx={{ textAlign: 'center', flex: 1 }}>
-              <Typography variant="subtitle2">Precision</Typography>
-              <Typography variant="h6">{performanceMetrics.precision.toFixed(1)}%</Typography>
-            </Box>
-            <Box sx={{ textAlign: 'center', flex: 1 }}>
-              <Typography variant="subtitle2">Recall</Typography>
-              <Typography variant="h6">{performanceMetrics.recall.toFixed(1)}%</Typography>
-            </Box>
-            <Box sx={{ textAlign: 'center', flex: 1 }}>
-              <Typography variant="subtitle2">F1 Score</Typography>
-              <Typography variant="h6">{performanceMetrics.f1Score.toFixed(1)}%</Typography>
-            </Box>
-          </Box>
-        </Box>
-      )} */}
-
-      {/* Layer Comparison - Commented out (handled by NeuronViz) */}
-      {/* {activations && (
-        <LayerComparison 
-          layers={layers}
-          activations={activations}
-        />
-      )} */}
-
-      {/* Error Surface - Commented out (handled by NeuronViz) */}
-      {/* {weights && (
-        <ErrorSurfaceViz
-          weights={weights}
-          error={performanceMetrics?.accuracy || 0}
-        />
-      )} */}
     </Box>
   );
-}; 
+};
