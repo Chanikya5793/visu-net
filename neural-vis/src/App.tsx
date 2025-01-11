@@ -7,6 +7,7 @@ import { CustomDatasetUploader } from './components/CustomDatasetUploader';
 import { DatasetSelector } from './components/DatasetSelector';
 import { DatasetViewer } from './components/DatasetViewer';
 import { MetricsGraph } from './components/MetricsGraph';
+import { ModelUploader } from './components/ModelUploader';
 import { NeuronViz } from './components/NeuronViz';
 import { TestingInterface } from './components/TestingInterface';
 import { TestModelButton } from './components/TestModelButton';
@@ -398,6 +399,29 @@ function App() {
     }
   };
 
+  const handleModelUpload = (modelData: any) => {
+    // Update network architecture
+    const architecture = modelData.trainingInfo.architecture;
+    setDataset(modelData.trainingInfo.datasetType);
+    
+    // Import the model into the trainer
+    if (trainerRef.current) {
+      trainerRef.current.importNetwork(JSON.stringify(modelData.model));
+    }
+    
+    // Set custom dataset from the model
+    setCustomDataset(modelData.dataset);
+    setIsUsingCustomDataset(true);
+    
+    // Update other training parameters
+    setLearningRate(modelData.trainingInfo.learningRate);
+    setEpochs(modelData.trainingInfo.epochs);
+    
+    // Reset states
+    handleReset();
+    setTrainingCompleted(true); // Enable testing immediately
+  };
+
   return (
     <Container className="App">
       <Typography variant="h4" gutterBottom>Neural Network Visualization</Typography>
@@ -411,20 +435,11 @@ function App() {
               dataset={dataset} 
               title="Default Dataset"
             />
-           {/* <Button 
-              variant="outlined"
-              onClick={handleUseDefaultDataset}
-              disabled={!isUsingCustomDataset}
-            >
-              Use Default Dataset
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={handleUseCustomDataset}
-              disabled={isUsingCustomDataset || customDataset.length === 0}
-            >
-              Use Custom Dataset
-            </Button>*/}
+            <DatasetViewer 
+              dataset={dataset}
+              data={customDataset}
+              title="Custom Dataset"
+            />
             <Button
               variant="outlined"
               onClick={handleDownloadCustomDataset}
@@ -437,7 +452,6 @@ function App() {
               dataset={dataset}
               onUploadDataset={handleSaveCustomDataset}
             />
-            
             <CustomDatasetCreator
               dataset={dataset}
               onSaveDataset={handleSaveCustomDataset}
@@ -546,6 +560,7 @@ function App() {
                 </Button>
               </span>
             </Tooltip>
+            <ModelUploader onModelUpload={handleModelUpload} />
           </Box>
         </>
       )}
