@@ -843,24 +843,37 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
       {layers.map((neuronsCount, layerIndex) => {
         if (layerIndex === 0) return null;
         const prevLayerNeurons = layers[layerIndex - 1];
-
+        
         return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
           Array.from({ length: neuronsCount }).map((_, toIdx) => {
             const weight = weights?.[layerIndex]?.[toIdx]?.[fromIdx] || 0;
             const isActive = animationState.currentLayer === layerIndex;
+            const connectionKey = getConnectionKey(layerIndex - 1, fromIdx, layerIndex, toIdx);
+            const isHighlighted = highlightedConnections.has(connectionKey);
             
             return (
               <g key={`weight-${layerIndex}-${fromIdx}-${toIdx}`}>
-                <line
-                  x1={layerIndex * layerSpacing}
-                  y1={(fromIdx + 1) * verticalSpacing}
-                  x2={(layerIndex + 1) * layerSpacing}
-                  y2={(toIdx + 1) * verticalSpacing}
-                  stroke={theme.palette.grey[600]} // Darker grey
-                  strokeWidth={Math.max(0.8, Math.abs(weight) * 2)} // Minimum width of 0.8
-                  opacity={isActive ? 1 : 0.6} // Increased minimum opacity
-                  style={styles.networkDiagram}
-                />
+                <path
+                  d={`M ${layerIndex * layerSpacing} ${(fromIdx + 1) * verticalSpacing} 
+                     C ${(layerIndex * layerSpacing + (layerIndex + 1) * layerSpacing) / 2} ${(fromIdx + 1) * verticalSpacing},
+                       ${(layerIndex * layerSpacing + (layerIndex + 1) * layerSpacing) / 2} ${(toIdx + 1) * verticalSpacing},
+                       ${(layerIndex + 1) * layerSpacing} ${(toIdx + 1) * verticalSpacing}`}
+                  stroke={isHighlighted ? theme.palette.primary.main : theme.palette.grey[400]}
+                  strokeWidth={Math.max(0.5, Math.abs(weight) * 2)}
+                  fill="none"
+                  opacity={isActive ? 1 : 0.6}
+                  strokeDasharray={isActive ? "4,4" : "none"}
+                  className={isActive ? "animated-connection" : ""}
+                >
+                  {isActive && (
+                    <animate
+                      attributeName="strokeDashoffset"
+                      values="0;8"
+                      dur="0.5s"
+                      repeatCount="indefinite"
+                    />
+                  )}
+                </path>
                 {Math.abs(weight) > 0.1 && (
                   <text
                     x={(layerIndex * layerSpacing + (layerIndex + 1) * layerSpacing) / 2}
@@ -872,12 +885,6 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
                     {weight.toFixed(2)}
                   </text>
                 )}
-                <title>
-                  Click to adjust weight
-                  From: Neuron {fromIdx} (Layer {layerIndex})
-                  To: Neuron {toIdx} (Layer {layerIndex + 1})
-                  Current: {weight.toFixed(4)}
-                </title>
               </g>
             );
           })

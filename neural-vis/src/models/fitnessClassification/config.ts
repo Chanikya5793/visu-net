@@ -7,8 +7,7 @@ export const fitnessModelConfig = {
   },
   output: {
     fitnessCategories: ["Fit", "Average", "Unfit"]
-  },
-  networkArchitecture: [12, 8, 6, 3]
+  }
 };
 
 // src/models/fitnessModel/data.ts

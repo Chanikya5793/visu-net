@@ -36,3 +36,16 @@
     transform: rotate(360deg);
   }
 }
+
+.animated-connection {
+  animation: flowAnimation 1s linear infinite;
+}
+
+@keyframes flowAnimation {
+  from {
+    stroke-dashoffset: 8;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

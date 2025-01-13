@@ -2,7 +2,7 @@
 
 import { NeuralNetwork } from 'brain.js';
 import { ITrainer, TrainingOptions, TrainerProgress, PerformanceMetrics } from '../TrainerInterface';
-import { fitnessModelConfig as config } from './config';
+import fitnessData from './fitnessClassification.json';
 
 export class FitnessTrainer implements ITrainer {
   private network!: NeuralNetwork;
@@ -12,7 +12,7 @@ export class FitnessTrainer implements ITrainer {
   private lastError: number = 1;
 
   constructor(customDataset?: any[]) {
-    this.customDataset = customDataset;
+    this.customDataset = customDataset || fitnessData;
     this.initNetwork();
   }
 
@@ -24,27 +24,31 @@ export class FitnessTrainer implements ITrainer {
     });
   }
 
-  private preprocessInput(data: any): number[] {
+  private preprocessInput(data: any) {
     const input = new Array(12).fill(0);
     
-    // Heart Rate encoding
-    const hrIndex = config.input.heartRateCategories.indexOf(data["Heart Rate (bpm)"]);
+    // Heart Rate encoding (5 neurons)
+    const hrIndex = ["60-75", "76-90", "91-110", "111-130", "131+"]
+      .indexOf(data["Heart Rate (bpm)"]);
     if (hrIndex >= 0) input[hrIndex] = 1;
     
-    // BMI encoding
-    const bmiIndex = config.input.bmiCategories.indexOf(data.BMI);
+    // BMI encoding (4 neurons)
+    const bmiIndex = ["Underweight", "Normal", "Overweight", "Obese"]
+      .indexOf(data.BMI);
     if (bmiIndex >= 0) input[5 + bmiIndex] = 1;
     
-    // Stamina encoding
-    const staminaIndex = config.input.staminaCategories.indexOf(data["Stamina Level"]);
+    // Stamina encoding (3 neurons)
+    const staminaIndex = ["Low", "Medium", "High"]
+      .indexOf(data["Stamina Level"]);
     if (staminaIndex >= 0) input[9 + staminaIndex] = 1;
     
     return input;
   }
 
-  private preprocessOutput(data: any): number[] {
+  private preprocessOutput(data: any) {
     const output = new Array(3).fill(0);
-    const index = config.output.fitnessCategories.indexOf(data["Fitness Classification"]);
+    const index = ["Fit", "Average", "Unfit"]
+      .indexOf(data["Fitness Classification"]);
     if (index >= 0) output[index] = 1;
     return output;
   }
@@ -58,20 +62,29 @@ export class FitnessTrainer implements ITrainer {
       output: this.preprocessOutput(item)
     }));
 
-    try {
-      const status = await this.network.trainAsync(trainingData, {
-        iterations: 1,
-        errorThresh: 0.005
-      });
-      
-      this.currentEpoch++;
-      this.lastError = status.error || 0;
-
-      if (options.onIteration) {
-        options.onIteration(this.currentEpoch, this.lastError);
+    for (let epoch = 0; epoch < options.epochs && this.isTraining; epoch++) {
+      try {
+        await this.network.trainAsync(trainingData, {
+          iterations: 1,
+          errorThresh: 0.005,
+          callback: (status: { error: number }) => {
+            this.lastError = status.error;
+            if (options.onIteration) {
+              options.onIteration(epoch, this.lastError);
+            }
+            return this.isTraining;
+          }
+        });
+        
+        this.currentEpoch = epoch;
+      } catch (error) {
+        console.error('Training error:', error);
+        break;
       }
-    } catch (error) {
-      console.error('Training error:', error);
+    }
+
+    if (options.onComplete && this.isTraining) {
+      options.onComplete();
     }
   }
 
