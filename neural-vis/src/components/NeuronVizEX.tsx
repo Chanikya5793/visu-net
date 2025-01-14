@@ -182,20 +182,45 @@ interface NetworkStatsProps {
 
 const NetworkStats: React.FC<NetworkStatsProps> = ({ weights, biases, learningRate }) => {
   const calculateStats = (): NetworkStatsType => {
-    const allWeights = weights.flat(2);
-    const allBiases = biases.flat();
-    const weightMean = allWeights.reduce((a, b) => a + b, 0) / allWeights.length;
-    const biasMean = allBiases.reduce((a, b) => a + b, 0) / allBiases.length;
+    if (!weights || !biases) {
+      return {
+        weightMean: 0,
+        weightStd: 0,
+        biasMean: 0,
+        biasStd: 0
+      };
+    }
+
+    // Safely flatten and filter weights
+    const allWeights = weights.flat(2).filter(w => w !== undefined && !isNaN(w));
+    const allBiases = biases.flat().filter(b => b !== undefined && !isNaN(b));
+    
+    const weightMean = allWeights.length > 0 
+      ? allWeights.reduce((a, b) => a + b, 0) / allWeights.length 
+      : 0;
+      
+    const biasMean = allBiases.length > 0 
+      ? allBiases.reduce((a, b) => a + b, 0) / allBiases.length 
+      : 0;
     
     return {
       weightMean,
-      weightStd: Math.sqrt(allWeights.reduce((a, b) => a + (b - weightMean) ** 2, 0) / allWeights.length),
+      weightStd: allWeights.length > 0 
+        ? Math.sqrt(allWeights.reduce((a, b) => a + (b - weightMean) ** 2, 0) / allWeights.length)
+        : 0,
       biasMean,
-      biasStd: Math.sqrt(allBiases.reduce((a, b) => a + (b - biasMean) ** 2, 0) / allBiases.length),
+      biasStd: allBiases.length > 0 
+        ? Math.sqrt(allBiases.reduce((a, b) => a + (b - biasMean) ** 2, 0) / allBiases.length)
+        : 0,
     };
   };
 
-  const { weightMean, weightStd, biasMean, biasStd } = calculateStats();
+  // Only render if we have valid data
+  if (!weights || !biases) {
+    return null;
+  }
+
+  const stats = calculateStats();
 
   return (
     <Paper sx={{ p: 2, mt: 2 }}>
@@ -203,13 +228,13 @@ const NetworkStats: React.FC<NetworkStatsProps> = ({ weights, biases, learningRa
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
         <Box>
           <Typography variant="subtitle2">Weights</Typography>
-          <Typography>Mean: {weightMean.toFixed(4)}</Typography>
-          <Typography>Std Dev: {weightStd.toFixed(4)}</Typography>
+          <Typography>Mean: {stats.weightMean.toFixed(4)}</Typography>
+          <Typography>Std Dev: {stats.weightStd.toFixed(4)}</Typography>
         </Box>
         <Box>
           <Typography variant="subtitle2">Biases</Typography>
-          <Typography>Mean: {biasMean.toFixed(4)}</Typography>
-          <Typography>Std Dev: {biasStd.toFixed(4)}</Typography>
+          <Typography>Mean: {stats.biasMean.toFixed(4)}</Typography>
+          <Typography>Std Dev: {stats.biasStd.toFixed(4)}</Typography>
         </Box>
       </Box>
       <Typography variant="subtitle2" sx={{ mt: 1 }}>
@@ -1149,7 +1174,7 @@ export const NeuronViz: React.FC<NeuronVizProps> = ({
 
         {/* Side Panel */}
         <Box sx={{ flex: 1 }}>
-          {weights && biases && (
+          {weights && weights.length > 0 && biases && biases.length > 0 && (
             <NetworkStats 
               weights={weights} 
               biases={biases} 

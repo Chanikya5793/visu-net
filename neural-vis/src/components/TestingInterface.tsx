@@ -188,10 +188,13 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             {dataset === 'logicGates' && (
               <>
                 <Typography>
-                  Probability of Output 0: {((1 - prediction[0]) * 100).toFixed(2)}%
+                  Output 0: {((prediction[0] || 0) * 100).toFixed(2)}%
                 </Typography>
                 <Typography>
-                  Probability of Output 1: {(prediction[0] * 100).toFixed(2)}%
+                  Output 1: {((prediction[1] || 0) * 100).toFixed(2)}%
+                </Typography>
+                <Typography variant="h6">
+                  Result: {prediction[1] > prediction[0] ? '1' : '0'}
                 </Typography>
               </>
             )}
