@@ -21,6 +21,11 @@ export function mapGateType(type: string): number[] {
     }
 }
 
+export function mapOutput(output: number): number[] {
+  // For binary output (0/1), return [1,0] or [0,1]
+  return [output === 1 ? 1 : 0, output === 0 ? 1 : 0];
+}
+
 export const logicGateData = {
     training: logicGatesJson.map((entry: any) => {
         const input1 = parseInt(entry["Input 1"], 10);
@@ -41,7 +46,7 @@ export const logicGateData = {
         return {
             // Combine inputs: [Input1, Input2, GateTypeEncoding]
             input: [input1, input2, ...gateTypeInput],
-            output: [output]
+            output: mapOutput(output)  // Convert single output to binary array
         };
     })
 };

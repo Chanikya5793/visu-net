@@ -37,7 +37,8 @@ export class FitnessTrainer implements ITrainer {
     this.network = new brain.NeuralNetwork({
       hiddenLayers: layers || [3], // Adjust layers per trainer
       activation: 'sigmoid',
-      learningRate: this.learningRate
+      learningRate: this.learningRate,
+      //outputSize: 3  // Three possible classifications
     });
   }
 
@@ -142,6 +143,7 @@ export class FitnessTrainer implements ITrainer {
   }
 
   predict(input: number[]): number[] {
+    // Return raw output array (3 neurons)
     return this.network.run(input);
   }
 
@@ -247,53 +249,73 @@ export class FitnessTrainer implements ITrainer {
   }
 
   getPerformanceMetrics(): PerformanceMetrics {
-    // Check if network is initialized
     if (!this.network || !this.isTraining && this.currentEpoch === 0) {
-      return {
-        accuracy: 0,
-        precision: 0,
-        recall: 0,
-        f1Score: 0
-      };
+      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
     }
 
     try {
-      // Calculate metrics using test data
       let correct = 0;
-      let truePositives = 0;
-      let falsePositives = 0;
-      let falseNegatives = 0;
-
+      const total = this.trainingData.length;
+      const confusionMatrix = {
+        fit: { tp: 0, fp: 0, fn: 0 },
+        average: { tp: 0, fp: 0, fn: 0 },
+        unfit: { tp: 0, fp: 0, fn: 0 }
+      };
+      
       this.trainingData.forEach(data => {
-        try {
-          const prediction = this.predict(data.input);
-          const expected = data.output[0];
-          const predicted = prediction[0] > 0.5 ? 1 : 0;
-
-          if (predicted === expected) correct++;
-          if (predicted === 1 && expected === 1) truePositives++;
-          if (predicted === 1 && expected === 0) falsePositives++;
-          if (predicted === 0 && expected === 1) falseNegatives++;
-        } catch (error) {
-          console.error('Error predicting:', error);
+        const prediction = this.predict(data.input);
+        const predictedClass = prediction.indexOf(Math.max(...prediction));
+        const expectedClass = data.output.indexOf(1);
+        
+        if (predictedClass === expectedClass) {
+          correct++;
+          // Count true positives for each class
+          switch(predictedClass) {
+            case 0: confusionMatrix.fit.tp++; break;
+            case 1: confusionMatrix.average.tp++; break;
+            case 2: confusionMatrix.unfit.tp++; break;
+          }
+        } else {
+          // Count false positives and negatives
+          switch(predictedClass) {
+            case 0: confusionMatrix.fit.fp++; break;
+            case 1: confusionMatrix.average.fp++; break;
+            case 2: confusionMatrix.unfit.fp++; break;
+          }
+          switch(expectedClass) {
+            case 0: confusionMatrix.fit.fn++; break;
+            case 1: confusionMatrix.average.fn++; break;
+            case 2: confusionMatrix.unfit.fn++; break;
+          }
         }
       });
 
-      const total = this.trainingData.length;
       const accuracy = correct / total;
-      const precision = truePositives / (truePositives + falsePositives) || 0;
-      const recall = truePositives / (truePositives + falseNegatives) || 0;
+
+      // Calculate macro-averaged metrics
+      const metrics = ['fit', 'average', 'unfit'].map(cls => {
+        const tp = confusionMatrix[cls as keyof typeof confusionMatrix].tp;
+        const fp = confusionMatrix[cls as keyof typeof confusionMatrix].fp;
+        const fn = confusionMatrix[cls as keyof typeof confusionMatrix].fn;
+        return {
+          precision: tp / (tp + fp) || 0,
+          recall: tp / (tp + fn) || 0
+        };
+      });
+
+      const precision = metrics.reduce((sum, m) => sum + m.precision, 0) / 3;
+      const recall = metrics.reduce((sum, m) => sum + m.recall, 0) / 3;
       const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
 
-      return { accuracy, precision, recall, f1Score };
+      return {
+        accuracy,
+        precision,
+        recall,
+        f1Score
+      };
     } catch (error) {
       console.error('Error calculating metrics:', error);
-      return {
-        accuracy: 0,
-        precision: 0,
-        recall: 0,
-        f1Score: 0
-      };
+      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
     }
   }
 }

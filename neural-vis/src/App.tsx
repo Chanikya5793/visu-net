@@ -182,7 +182,9 @@ function App() {
     if (!trainerRef.current) return;
     const input = prepareTestInput();
     const result = trainerRef.current.predict(input);
-    setPrediction(Array.isArray(result) ? result : [result]);
+    
+    // For fitness classification, result will be [fit_prob, avg_prob, unfit_prob]
+    setPrediction(result);
   };
 
   const prepareTestInput = () => {
@@ -223,9 +225,9 @@ function App() {
   const getNetworkArchitecture = (selectedDataset: string): number[] => {
     switch(selectedDataset) {
       case 'logicGates':
-        return [7, 3, 1]; // Input(2 + 5 for gate type), Hidden(3), Output(1)
+        return [7, 3, 2]; // Input(2 + 5 for gate type), Hidden(3), Output(1)
       case 'fitnessClassification':
-        return [3, 4, 4, 1]; // Input(3), Hidden(4,4), Output(1)
+        return [3, 4, 4, 3]; // Input(3), Hidden(4,4), Output(1)
       case 'weatherPrediction':
         return [3, 6, 4, 1]; // Input(3), Hidden(6,4), Output(1)
       default:

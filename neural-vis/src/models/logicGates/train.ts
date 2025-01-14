@@ -30,7 +30,8 @@ export class LogicGateTrainer implements ITrainer {
     this.network = new brain.NeuralNetwork({
       hiddenLayers: layers || [3], // Adjust layers per trainer
       activation: 'sigmoid',
-      learningRate: this.learningRate
+      learningRate: this.learningRate,
+      //outputSize: 2  // Binary output (true/false)
     });
   }
 
@@ -135,7 +136,16 @@ export class LogicGateTrainer implements ITrainer {
   }
 
   predict(input: number[]): number[] {
-    return this.network.run(input);
+    const output = this.network.run(input);
+    // Return raw output array since we now have multiple output neurons
+    return output;
+  }
+
+  // Add helper method to interpret output
+  interpretOutput(output: number[]): number {
+    // Find index of highest activation
+    const maxIndex = output.indexOf(Math.max(...output));
+    return maxIndex === 0 ? 1 : 0;
   }
 
   getProgress(): {
@@ -240,39 +250,30 @@ export class LogicGateTrainer implements ITrainer {
   }
 
   getPerformanceMetrics(): PerformanceMetrics {
-    // Check if network is initialized
     if (!this.network || !this.isTraining && this.currentEpoch === 0) {
-      return {
-        accuracy: 0,
-        precision: 0,
-        recall: 0,
-        f1Score: 0
-      };
+      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
     }
 
     try {
-      // Calculate metrics using test data
       let correct = 0;
       let truePositives = 0;
       let falsePositives = 0;
       let falseNegatives = 0;
 
-      logicGateData.training.forEach(data => {
-        try {
-          const prediction = this.predict(data.input);
-          const expected = data.output[0];
-          const predicted = prediction[0] > 0.5 ? 1 : 0;
+      this.trainingData.forEach(data => {
+        const prediction = this.predict(data.input);
+        const predictedClass = prediction.indexOf(Math.max(...prediction));
+        const expectedClass = data.output.indexOf(1);
 
-          if (predicted === expected) correct++;
-          if (predicted === 1 && expected === 1) truePositives++;
-          if (predicted === 1 && expected === 0) falsePositives++;
-          if (predicted === 0 && expected === 1) falseNegatives++;
-        } catch (error) {
-          console.error('Error predicting:', error);
+        if (predictedClass === expectedClass) {
+          correct++;
         }
+        if (predictedClass === 0 && expectedClass === 0) truePositives++;
+        if (predictedClass === 0 && expectedClass === 1) falsePositives++;
+        if (predictedClass === 1 && expectedClass === 0) falseNegatives++;
       });
 
-      const total = logicGateData.training.length;
+      const total = this.trainingData.length;
       const accuracy = correct / total;
       const precision = truePositives / (truePositives + falsePositives) || 0;
       const recall = truePositives / (truePositives + falseNegatives) || 0;
@@ -281,12 +282,7 @@ export class LogicGateTrainer implements ITrainer {
       return { accuracy, precision, recall, f1Score };
     } catch (error) {
       console.error('Error calculating metrics:', error);
-      return {
-        accuracy: 0,
-        precision: 0,
-        recall: 0,
-        f1Score: 0
-      };
+      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
     }
   }
 }

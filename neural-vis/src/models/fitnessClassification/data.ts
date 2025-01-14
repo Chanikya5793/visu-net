@@ -56,16 +56,23 @@ export function mapBMI(bmi: string): number {
   }
 }
 
-function mapClassification(classification: string): number[] {
+export function mapClassification(classification: string): number[] {
   switch (classification.toLowerCase()) {
-    case 'fit':
-      return [1];
-    case 'average':
-      return [0.5];
-    case 'unfit':
-      return [0];
-    default:
-      return [0];
+    case 'fit': return [1, 0, 0];
+    case 'average': return [0, 1, 0];
+    case 'unfit': return [0, 0, 1];
+    default: return [0, 0, 0];
+  }
+}
+
+// Export function for interpreting predictions
+export function interpretClassification(output: number[]): string {
+  const maxIdx = output.indexOf(Math.max(...output));
+  switch(maxIdx) {
+    case 0: return 'Fit';
+    case 1: return 'Average';
+    case 2: return 'Unfit';
+    default: return 'Unknown';
   }
 }
 
@@ -78,7 +85,7 @@ export const fitnessData = {
 
     return {
       input: [heartRate, bmi, stamina],
-      output: classification
+      output: classification  // Now outputs [1,0,0], [0,1,0], or [0,0,1]
     };
   })
 };

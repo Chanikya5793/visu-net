@@ -18,7 +18,7 @@ interface TestingInterfaceProps {
   prediction: number[];
   onTestInputChange: (key: string, value: any) => void;
   onTest: () => void;
-  onReset: () => void; // Add reset handler
+  onReset: () => void;
 }
 
 export const TestingInterface: React.FC<TestingInterfaceProps> = ({
@@ -29,6 +29,25 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
   onTest,
   onReset
 }) => {
+  const interpretPrediction = (pred: number[]) => {
+    switch(dataset) {
+      case 'logicGates':
+        // Get index of highest activation
+        return pred[0] > pred[1] ? 'True (1)' : 'False (0)';
+      
+      case 'fitnessClassification':
+        const maxIdx = pred.indexOf(Math.max(...pred));
+        return ['Fit', 'Average', 'Unfit'][maxIdx];
+      
+      case 'weatherPrediction':
+        // Single output representing probability
+        return `${(pred[0] * 100).toFixed(1)}% chance of rain`;
+        
+      default:
+        return JSON.stringify(pred);
+    }
+  };
+
   return (
     <Box sx={{ mt: 4, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
       <Typography variant="h6" gutterBottom>
@@ -213,6 +232,12 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             )}
           </Box>
         )}
+      </Box>
+      <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+        <Typography variant="h6">Prediction: {interpretPrediction(prediction)}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Raw outputs: [{prediction.map(p => p.toFixed(4)).join(', ')}]
+        </Typography>
       </Box>
     </Box>
   );
