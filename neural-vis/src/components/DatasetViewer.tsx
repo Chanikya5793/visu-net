@@ -92,9 +92,9 @@ export const DatasetViewer: React.FC<DatasetViewerProps> = ({
       } else {
         if (data.input && Array.isArray(data.input)) {
           return {
-            temperature: (data.input[0] * 50).toFixed(1),
-            humidity: (data.input[1] * 100).toFixed(1),
-            cloudCover: (data.input[2] * 100).toFixed(1),
+            temperature: (data.input[0] * 50).toFixed(1)+ 'C',
+            humidity: (data.input[1] * 100).toFixed(1)+ '%',
+            cloudCover: (data.input[2] * 100).toFixed(1)+ '%',
             rainProbability: (data.output[0] * 100).toFixed(1) + '%'
           };
         } else {
