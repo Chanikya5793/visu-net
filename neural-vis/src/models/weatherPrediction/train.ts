@@ -35,9 +35,11 @@ export class WeatherTrainer implements ITrainer {
 
   initNetwork(layers?: number[]): void {
     this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [3], // Adjust layers per trainer
-      activation: 'sigmoid',
-      learningRate: this.learningRate
+        // Input: 10 neurons (4 temp + 3 humidity + 3 cloud cover)
+        // Output: 4 neurons (rain probability ranges)
+        hiddenLayers: layers || [8, 6],
+        activation: 'sigmoid',
+        learningRate: this.learningRate
     });
   }
 

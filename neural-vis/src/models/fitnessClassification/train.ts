@@ -35,9 +35,11 @@ export class FitnessTrainer implements ITrainer {
 
   initNetwork(layers?: number[]): void {
     this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [3], // Adjust layers per trainer
-      activation: 'sigmoid',
-      learningRate: this.learningRate
+        // Input: 12 neurons (5 HR + 3 stamina + 4 BMI)
+        // Output: 3 neurons (Fit, Average, Unfit)
+        hiddenLayers: layers || [10, 6],
+        activation: 'sigmoid',
+        learningRate: this.learningRate
     });
   }
 

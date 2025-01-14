@@ -20,6 +20,13 @@ export class LogicGateTrainer implements ITrainer {
   constructor(customDataset?: any[]) {
     this.trainingData = customDataset || logicGateData.training;
     this.initNetwork();
+    // Initialize with one iteration to set up network structure
+    this.network.train(this.trainingData, {
+      iterations: 1,
+      errorThresh: 0.01,
+      log: false,
+      learningRate: 0.01
+    });
   }
 
   getNetwork(): brain.NeuralNetwork {
@@ -27,10 +34,14 @@ export class LogicGateTrainer implements ITrainer {
   }
 
   initNetwork(layers?: number[]): void {
+    // Modified layer structure:
+    // Input layer: 12 neurons (2 inputs + 1 isUnary flag + 9 gate types)
+    // Hidden layers: Configurable or default [10, 6]
+    // Output layer: 1 neuron
     this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [3], // Adjust layers per trainer
-      activation: 'sigmoid',
-      learningRate: this.learningRate
+        hiddenLayers: layers || [10, 6], // Increased complexity to handle unary gates
+        activation: 'sigmoid', 
+        learningRate: this.learningRate
     });
   }
 
