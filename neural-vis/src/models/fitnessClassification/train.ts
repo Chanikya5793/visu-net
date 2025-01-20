@@ -176,29 +176,40 @@ export class FitnessTrainer implements ITrainer {
     });
   }
 
-  private updateNetworkState(): void {
-    const networkState = this.network.toJSON();
-    
-    // Include input layer activations
-    this.activations = [
-      // Add input layer activations
-      networkState.layers[0].weights[0] || [], // Input layer
-      // Add hidden and output layer activations
-      ...networkState.layers.map((layer: any) => {
-        if (layer.biases) {
-          return layer.biases.map((_: any, i: number) => {
-            const weights = layer.weights[i] || [];
-            return Math.tanh(weights.reduce((sum: number, w: number) => sum + w, 0) + layer.biases[i]);
-          });
-        }
-        return [];
-      })
-    ];
+// (Apply same fix to other trainer classes)
 
-    // Store weights and biases
-    this.weights = networkState.layers.map((layer: any) => layer.weights || []);
-    this.biases = networkState.layers.map((layer: any) => layer.biases || []);
+private updateNetworkState(): void {
+  const networkState = this.network.toJSON();
+  
+  // Critical fix: Proper weight storage including input layer
+  this.weights = [];
+  
+  // Handle input layer weights
+  if (networkState.layers[0] && networkState.layers[0].weights) {
+    this.weights.push(networkState.layers[0].weights);
   }
+  
+  // Handle other layers
+  for (let i = 1; i < networkState.layers.length; i++) {
+    const layer = networkState.layers[i];
+    if (layer.weights) {
+      this.weights.push(layer.weights);
+    }
+  }
+
+  // Update activations
+  this.activations = networkState.layers.map((layer: any) => {
+    if (layer.biases) {
+      return layer.biases.map((_: any, i: number) => {
+        const weights = layer.weights[i] || [];
+        return Math.tanh(weights.reduce((sum: number, w: number) => sum + w, 0) + layer.biases[i]);
+      });
+    }
+    return [];
+  });
+
+  this.biases = networkState.layers.map((layer: any) => layer.biases || []);
+}
 
   getWeights(): number[][][] {
     return this.weights;

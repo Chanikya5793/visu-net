@@ -17,15 +17,18 @@
  * as they are handled by the parent NeuronViz component.
  */
 
-import { Box, Paper, Typography, useTheme } from '@mui/material';
 import React, { useRef } from 'react';
+import { useTheme } from '@mui/material/styles';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
 import { NeuronInfo, NeuronVizProps } from '../../../types/neuron-viz.types';
-import { InfoTooltip } from '../controls/InfoTooltip';
-import { NetworkStats } from '../metrics/NetworkStats';
-import { ActivationPatterns } from './ActivationPatterns';
 import { GradientFlow } from './GradientFlow';
 import { GradientOverlay } from './GradientOverlay';
+import { ActivationPatterns } from './ActivationPatterns';
 import { WeightDistribution } from './WeightDistribution';
+import { InfoTooltip } from '../controls/InfoTooltip';
+import { NetworkStats } from '../metrics/NetworkStats';
 
 interface NetworkVisualizationProps extends NeuronVizProps {
   showBackprop: boolean;
@@ -45,7 +48,7 @@ interface NetworkVisualizationProps extends NeuronVizProps {
   };
 }
 
-export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
+const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   layers,
   activations,
   weights,
@@ -205,20 +208,18 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     weight: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Simplified connection strength calculation
     return isInputLayer ? 
-      Math.abs(weight) : // For input layer, use weight directly
-      Math.abs(weight * fromActivation); // For other layers, use weight * activation
+      Math.abs(weight * fromActivation) : 
+      Math.abs(weight * fromActivation);
   };
 
   const getConnectionOpacity = (
-    layerIndex: number,
+    layerIndex: number, 
     connectionStrength: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Higher base opacity for input layer
     const baseOpacity = isInputLayer ? 0.8 : 0.5;
-    return baseOpacity + Math.min(connectionStrength, 1) * 0.2;
+    return Math.min(baseOpacity + connectionStrength * 0.3, 1);
   };
 
   const getConnectionWidth = (
@@ -226,15 +227,22 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     weight: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Simplified width calculation
-    const baseWidth = isInputLayer ? 2 : 1;
-    return Math.max(baseWidth, Math.abs(weight) * 3);
+    const baseWidth = isInputLayer ? 1.5 : 1;
+    const weightScale = isInputLayer ? 4 : 3;
+    return Math.max(baseWidth, Math.abs(weight) * weightScale);
   };
 
   const getActivityThreshold = (layerIndex: number) => {
     return layerIndex === 1 ? 0.1 : 0.3;
   };
 
+  // Add interface for connection positions
+  interface ConnectionPosition {
+    fromPos: { x: number; y: number };
+    toPos: { x: number; y: number };
+  }
+
+  // Update the renderConnections function
   const renderConnections = () => (
     <g className="connections">
       {layers.map((neuronsCount, layerIndex) => {
@@ -243,64 +251,24 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
         return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
           Array.from({ length: neuronsCount }).map((_, toIdx) => {
-            const weight = weights?.[layerIndex - 1]?.[fromIdx]?.[toIdx] || 0;
-            const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
-            const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
+            // Critical fix: Proper weight indexing for input layer
+            const weight = layerIndex === 1 
+              ? weights?.[0]?.[fromIdx]?.[toIdx] ?? 0  // Input layer weights
+              : weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] ?? 0; // Other layers
             
+            const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] ?? 0;
+            const toActivation = activations?.[layerIndex]?.[toIdx] ?? 0;
+            
+            // Get neuron positions
             const fromPos = getNeuronPosition(layerIndex - 1, fromIdx);
             const toPos = getNeuronPosition(layerIndex, toIdx);
-            
+
+            // Calculate visual properties
             const isInputLayer = layerIndex === 1;
             const connectionStrength = getConnectionStrength(layerIndex, fromActivation, toActivation, weight);
-            const isActive = connectionStrength > getActivityThreshold(layerIndex);
             const connectionOpacity = getConnectionOpacity(layerIndex, connectionStrength);
             const strokeWidth = getConnectionWidth(layerIndex, weight);
-            
-            // Calculate weight label position with offset to prevent overlapping
-            const midX = (fromPos.x + toPos.x) / 2;
-            const midY = (fromPos.y + toPos.y) / 2;
-            const dx = toPos.x - fromPos.x;
-            const dy = toPos.y - fromPos.y;
-            const angle = Math.atan2(dy, dx);
-            const lineLength = Math.sqrt(dx * dx + dy * dy);
-            
-            // Position labels at different points along the line with dynamic shuffling
-            const getShuffledPosition = (layerIndex: number, fromIdx: number, toIdx: number) => {
-              // Create a unique but consistent pattern based on indices
-              const patternSeed = (fromIdx * 7 + toIdx * 13) % 5;  // Use prime numbers for better distribution
-              
-              if (isInputLayer) {
-                // Input layer: Spread more evenly
-                switch(patternSeed) {
-                  case 0: return 0.3;  // Near start
-                  case 1: return 0.4;  // Between start and middle
-                  case 2: return 0.5;  // Middle
-                  case 3: return 0.6;  // Between middle and end
-                  case 4: return 0.7;  // Near end
-                  default: return 0.5;
-                }
-              } else {
-                // Hidden layers: Closer to source with more variation
-                switch(patternSeed) {
-                  case 0: return 0.15;  // Very close to start
-                  case 1: return 0.25;  // Close to start
-                  case 2: return 0.30;  // Bit further
-                  case 3: return 0.60;   // Between very close and close
-                  case 4: return 0.85;   // Between close and bit further
-                  default: return 0.25;
-                }
-              }
-            };
 
-            const labelPosition = getShuffledPosition(layerIndex, fromIdx, toIdx);
-            const labelX = fromPos.x + dx * labelPosition;
-            const labelY = fromPos.y + dy * labelPosition;
-            
-            // Color based on activity for input layer, weight sign for others
-            const connectionColor = isInputLayer ?
-              theme.palette.primary.main :
-              (weight > 0 ? theme.palette.success.main : theme.palette.error.main);
-            
             return (
               <g key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}>
                 <line
@@ -308,30 +276,21 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                   y1={fromPos.y}
                   x2={toPos.x}
                   y2={toPos.y}
-                  stroke={connectionColor}
                   strokeWidth={strokeWidth}
                   opacity={connectionOpacity}
-                >
-                  {isInputLayer && (
-                    <animate
-                      attributeName="opacity"
-                      values={`${connectionOpacity};${connectionOpacity * 0.7};${connectionOpacity}`}
-                      dur="0.6s"
-                      repeatCount="indefinite"
-                      begin={`${(fromIdx + toIdx) * 0.1}s`}
-                    />
-                  )}
-                </line>
-                <text
-                  x={labelX}
-                  y={labelY}
-                  textAnchor="middle"
-                  fill={theme.palette.text.primary}
-                  fontSize={10}
-                  fontWeight="bold"
-                >
-                  {weight.toFixed(2)}
-                </text>
+                  stroke={theme.palette.grey[800]}
+                />
+                {Math.abs(weight) > 0.05 && (
+                  <text
+                    x={(fromPos.x + toPos.x) / 2}
+                    y={(fromPos.y + toPos.y) / 2}
+                    textAnchor="middle"
+                    fontSize={10}
+                    fill={theme.palette.text.primary}
+                  >
+                    {weight.toFixed(2)}
+                  </text>
+                )}
               </g>
             );
           })
@@ -527,3 +486,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     </Box>
   );
 };
+
+// At the end of the file
+// Change the export at the end of NetworkVisualization.tsx
+export { NetworkVisualization };  // Change from 'export default'
