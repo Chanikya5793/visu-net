@@ -36,7 +36,7 @@
  */
 
 import { Box, Typography } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { NeuronInfo, NeuronVizProps } from '../types/neuron-viz.types';
 import { GradientLegend } from './network/controls/GradientLegend';
 import { ImportDialog } from './network/dialogs/ImportDialog';
@@ -45,21 +45,64 @@ import { NetworkControls } from './network/NetworkControls';
 import { ErrorSurfaceViz } from './network/visualization/ErrorSurfaceViz';
 import { LayerComparison } from './network/visualization/LayerComparison';
 import { NetworkVisualization } from './network/visualization/NetworkVisualization';
+import { computeNetworkStructure, updateVisuals } from '../utils/networkUtils';
+import { useVirtualization } from '../hooks/useVirtualization';
 
-export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
+export const NeuronViz: React.FC<NeuronVizProps> = memo(({ 
+  layers,
+  activations,
+  weights,
+  biases,
+  dataset,
+  isTraining,
+  onWeightAdjust,
+  learningRate,
+  onLearningRateChange,
+  onExportNetwork,
+  onImportNetwork,
+  performanceMetrics,
+  trainingSpeed,
+  onTrainingSpeedChange,
+  onArchitectureChange
+}) => {
   // State management
   const [selectedNeuron, setSelectedNeuron] = useState<NeuronInfo | null>(null);
   const [showBackprop, setShowBackprop] = useState(false);
   const [showGradients, setShowGradients] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState('');
-  const [editedLayers, setEditedLayers] = useState(props.layers);
+  const [editedLayers, setEditedLayers] = useState(layers);
+
+  // Memoize expensive computations
+  const networkStructure = useMemo(() => {
+    return computeNetworkStructure(layers, weights);
+  }, [layers, weights]);
+
+  // Use requestAnimationFrame for smooth animations
+  useEffect(() => {
+    if (isTraining) {
+      let frame: number;
+      const animate = () => {
+        updateVisuals();
+        frame = requestAnimationFrame(animate);
+      };
+      frame = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [isTraining]);
+
+  // Virtual scrolling for large networks
+  const virtualizedLayers = useVirtualization({
+    items: layers,
+    height: 600,
+    itemHeight: 100
+  });
 
   // Handlers
   const handleImport = () => {
-    if (importData && props.onImportNetwork) {
+    if (importData && onImportNetwork) {
       try {
-        props.onImportNetwork(importData);
+        onImportNetwork(importData);
         setShowImportDialog(false);
         setImportData('');
       } catch (error) {
@@ -74,7 +117,20 @@ export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
       
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
         <NetworkControls 
-          {...props}
+          layers={layers}
+          activations={activations}
+          weights={weights}
+          dataset={dataset}
+          isTraining={isTraining}
+          onWeightAdjust={onWeightAdjust}
+          learningRate={learningRate}
+          onLearningRateChange={onLearningRateChange}
+          onExportNetwork={onExportNetwork}
+          onImportNetwork={(data) => onImportNetwork?.(data)}
+          performanceMetrics={performanceMetrics}
+          trainingSpeed={trainingSpeed}
+          onTrainingSpeedChange={onTrainingSpeedChange}
+          onArchitectureChange={onArchitectureChange}
           showBackprop={showBackprop}
           setShowBackprop={setShowBackprop}
           showGradients={showGradients}
@@ -88,50 +144,38 @@ export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
       {showGradients && <GradientLegend />}
 
       <NetworkVisualization 
-        {...props}
+        layers={layers}
+        activations={activations}
+        weights={weights}
+        biases={biases}
+        dataset={dataset}
+        isTraining={isTraining}
         showBackprop={showBackprop}
         showGradients={showGradients}
         selectedNeuron={selectedNeuron}
         setSelectedNeuron={setSelectedNeuron}
+        onWeightAdjust={onWeightAdjust}
+        learningRate={learningRate}
+        performanceMetrics={performanceMetrics}
       />
 
       {/* Layer Statistics and Performance Metrics */}
       <Box sx={{ mt: 4 }}>
-        {/* Remove outer heading and description */}
-        {/* <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Performance Metrics</Typography>
-          <InfoTooltip
-            title="Performance Metrics"
-            description={
-              <Box>
-                <Typography variant="body2" gutterBottom>
-                  Key metrics showing network performance:
-                </Typography>
-                <Typography variant="body2" component="ul" sx={{ pl: 2, m: 0 }}>
-                  <li>Accuracy: Percentage of correct predictions overall</li>
-                  <li>Precision: True positives / (True + False positives)</li>
-                  <li>Recall: True positives / (True positives + False negatives)</li>
-                  <li>F1 Score: Harmonic mean of precision and recall</li>
-                </Typography>
-              </Box>
-            }
-          />
-        </Box> */}
-        <PerformanceMetrics metrics={props.performanceMetrics} />
+        <PerformanceMetrics metrics={performanceMetrics} />
 
-        {props.activations && (
+        {activations && (
           <LayerComparison
-            layers={props.layers}
-            activations={props.activations}
+            layers={layers}
+            activations={activations}
           />
         )}
       </Box>
 
       {/* Error Surface */}
-      {props.weights && (
+      {weights && (
         <ErrorSurfaceViz
-          weights={props.weights}
-          error={props.performanceMetrics?.accuracy || 0}
+          weights={weights}
+          error={performanceMetrics?.accuracy || 0}
         />
       )}
 
@@ -144,4 +188,4 @@ export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
       />
     </Box>
   );
-}; 
+});

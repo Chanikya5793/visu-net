@@ -23,7 +23,7 @@ export function mapGateType(type: string): number[] {
 
 export function mapOutput(output: number): number[] {
   // For binary output (0/1), return [1,0] or [0,1]
-  return [output === 1 ? 1 : 0, output === 0 ? 1 : 0];
+  return output === 1 ? [1, 0] : [0, 1];
 }
 
 export const logicGateData = {

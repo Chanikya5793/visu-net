@@ -14,9 +14,15 @@ export interface ITrainer {
   setLearningRate(rate: number): void;
   exportNetwork(): string;
   importNetwork(data: string): void;
-  getPerformanceMetrics(): PerformanceMetrics;
+  // Update return type to Promise
+  getPerformanceMetrics(): Promise<PerformanceMetrics>;
   initNetwork(layers?: number[]): void;
   getNetwork(): brain.NeuralNetwork;
+
+  // Add caching methods
+  clearCache(): void;
+  getCachedMetrics(): PerformanceMetrics | null;
+  setCachedMetrics(metrics: PerformanceMetrics): void;
 }
 
 export interface TrainingOptions {
@@ -39,4 +45,10 @@ export interface PerformanceMetrics {
   precision: number;
   recall: number;
   f1Score: number;
+}
+
+export interface CacheConfig {
+  metricsTimeout: number;
+  weightsTimeout: number;
+  maxCacheSize: number;
 }

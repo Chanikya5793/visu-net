@@ -1,8 +1,9 @@
 import * as brain from 'brain.js';
 import { weatherData } from './data';
 import { ITrainer, TrainingOptions, TrainerProgress, PerformanceMetrics } from '../TrainerInterface';
+import { OptimizedTrainerBase } from '../OptimizedTrainerBase';
 
-export class WeatherTrainer implements ITrainer {
+export class WeatherTrainer extends OptimizedTrainerBase implements ITrainer {
   protected network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
   private isPaused: boolean = false;
@@ -18,6 +19,7 @@ export class WeatherTrainer implements ITrainer {
   private trainingData: any[];
 
   constructor(customDataset?: any[]) {
+    super();
     this.trainingData = customDataset || weatherData.training;
     this.initNetwork();
     // Initialize with valid training options
@@ -246,54 +248,16 @@ export class WeatherTrainer implements ITrainer {
     }
   }
 
-  getPerformanceMetrics(): PerformanceMetrics {
-    // Check if network is initialized
-    if (!this.network || !this.isTraining && this.currentEpoch === 0) {
-      return {
-        accuracy: 0,
-        precision: 0,
-        recall: 0,
-        f1Score: 0
-      };
-    }
-
-    try {
-      // Calculate metrics using test data
-      let correct = 0;
-      let truePositives = 0;
-      let falsePositives = 0;
-      let falseNegatives = 0;
-
-      this.trainingData.forEach(data => {
-        try {
-          const prediction = this.predict(data.input);
-          const expected = data.output[0];
-          const predicted = prediction[0] > 0.5 ? 1 : 0;
-
-          if (predicted === expected) correct++;
-          if (predicted === 1 && expected === 1) truePositives++;
-          if (predicted === 1 && expected === 0) falsePositives++;
-          if (predicted === 0 && expected === 1) falseNegatives++;
-        } catch (error) {
-          console.error('Error predicting:', error);
-        }
-      });
-
-      const total = this.trainingData.length;
-      const accuracy = correct / total;
-      const precision = truePositives / (truePositives + falsePositives) || 0;
-      const recall = truePositives / (truePositives + falseNegatives) || 0;
-      const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
-
-      return { accuracy, precision, recall, f1Score };
-    } catch (error) {
-      console.error('Error calculating metrics:', error);
-      return {
-        accuracy: 0,
-        precision: 0,
-        recall: 0,
-        f1Score: 0
-      };
-    }
+  async getPerformanceMetrics(): Promise<PerformanceMetrics> {
+    return super.getPerformanceMetrics();
   }
+
+    // Implement required abstract methods
+    protected getPredictions(): number[][] {
+      return this.trainingData.map(data => this.predict(data.input));
+    }
+  
+    protected getActualValues(): number[][] {
+      return this.trainingData.map(data => data.output);
+    }
 }

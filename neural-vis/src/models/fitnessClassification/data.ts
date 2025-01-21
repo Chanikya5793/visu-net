@@ -56,7 +56,7 @@ export function mapBMI(bmi: string): number {
   }
 }
 
-export function mapClassification(classification: string): number[] {
+function mapClassification(classification: string): number[] {
   switch (classification.toLowerCase()) {
     case 'fit': return [1, 0, 0];
     case 'average': return [0, 1, 0];

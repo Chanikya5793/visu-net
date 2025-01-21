@@ -1,6 +1,6 @@
 import DownloadIcon from '@mui/icons-material/Download';
 import { Box, Button, Container, SelectChangeEvent, Tooltip, Typography } from '@mui/material';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import './App.css';
 import { CustomDatasetCreator } from './components/CustomDatasetCreator';
 import { CustomDatasetUploader } from './components/CustomDatasetUploader';
@@ -17,10 +17,16 @@ import { fitnessData, mapBMI, mapHeartRate, mapStamina } from './models/fitnessC
 import { FitnessTrainer } from './models/fitnessClassification/train';
 import { logicGateData, mapGateType } from './models/logicGates/data';
 import { LogicGateTrainer } from './models/logicGates/train';
-import { ITrainer } from './models/TrainerInterface';
+import { ITrainer, PerformanceMetrics } from './models/TrainerInterface';
 import { weatherData } from './models/weatherPrediction/data';
 import { WeatherTrainer } from './models/weatherPrediction/train';
 import { createModelExport } from './utils/exportUtils';
+import { ModelArchitectureTester } from './components/ModelArchitectureTester';
+import { ArchitectureComparisonChart } from './components/ArchitectureComparisonChart';
+import { ProbabilityDistribution } from './components/ProbabilityDistribution';
+import { CrossValidator } from './models/CrossValidator';
+import { ArchitectureTestResult } from './types/architecture';
+import { CrossValidationResults } from './components/CrossValidationResults';
 
 interface MetricPoint {
   epoch: number;
@@ -49,8 +55,14 @@ function App() {
   const [trainingSpeed, setTrainingSpeed] = useState(1);
   const [customDataset, setCustomDataset] = useState<any[]>([]);
   const [isUsingCustomDataset, setIsUsingCustomDataset] = useState(false);
+  const [architectureResults, setArchitectureResults] = useState<ArchitectureTestResult[]>([]);
+  const [isTestingArchitectures, setIsTestingArchitectures] = useState(false);
+  const [crossValidationResults, setCrossValidationResults] = useState<PerformanceMetrics[]>([]);
+  const [isCrossValidating, setIsCrossValidating] = useState(false);
+  const [currentMetrics, setCurrentMetrics] = useState<PerformanceMetrics | null>(null);
 
   const trainerRef = useRef<ITrainer | null>(null);
+  const networkRef = useRef<ITrainer | null>(null);
 
   // Handlers
   const handleChange = (event: SelectChangeEvent<string>) => {
@@ -63,13 +75,22 @@ function App() {
 
   // Training handlers
   const handleStartTraining = async () => {
-    if (!dataset || isTraining) return;
+    if (!dataset || isTraining || !networkRef.current) return;
     
-    trainerRef.current = createTrainer(dataset);
-    if (!trainerRef.current) return;
+    setIsTraining(true);
+    setTrainingCompleted(false);
 
-    resetTrainingState();
-    await startTraining();
+    try {
+      await networkRef.current.train({
+        epochs,
+        onIteration: handleIteration,
+        onComplete: handleComplete,
+        onStop: handleStop
+      });
+    } catch (error) {
+      console.error('Training error:', error);
+      setIsTraining(false);
+    }
   };
 
   // Helper functions
@@ -107,18 +128,25 @@ function App() {
   };
 
   // Event handlers
-  const handleIteration = (iter: number, err: number) => {
-    setIteration(iter);
-    setLoss(err);
-    setAccuracy(1 - err);
-    setMetricsHistory(prev => [...prev, { epoch: iter, loss: err, accuracy: 1 - err }]);
+  const handleIteration = async (iteration: number, error: number) => {
+    if (!networkRef.current) return;
     
-    // Update network state
-    if (trainerRef.current) {
-      setNetworkActivations(trainerRef.current.getActivations());
-      setNetworkWeights(trainerRef.current.getWeights());
-      setNetworkBiases(trainerRef.current.getBiases());
-    }
+    setIteration(iteration);
+    setLoss(error);
+    
+    const metrics = await networkRef.current.getPerformanceMetrics();
+    setAccuracy(metrics.accuracy);
+    
+    // Update visualizations
+    setNetworkActivations(networkRef.current.getActivations());
+    setNetworkWeights(networkRef.current.getWeights());
+    setNetworkBiases(networkRef.current.getBiases());
+    
+    setMetricsHistory(prev => [...prev, {
+      epoch: iteration,
+      loss: error,
+      accuracy: metrics.accuracy
+    }]);
   };
 
   const handleComplete = () => {
@@ -225,11 +253,11 @@ function App() {
   const getNetworkArchitecture = (selectedDataset: string): number[] => {
     switch(selectedDataset) {
       case 'logicGates':
-        return [7, 3, 2]; // Input(2 + 5 for gate type), Hidden(3), Output(1)
+        return [2, 4, 2]; // Input(2), Hidden(4), Output(2)
       case 'fitnessClassification':
-        return [3, 4, 4, 3]; // Input(3), Hidden(4,4), Output(1)
+        return [3, 4, 3]; // Input(3), Hidden(4), Output(3)
       case 'weatherPrediction':
-        return [3, 6, 4, 1]; // Input(3), Hidden(6,4), Output(1)
+        return [3, 6, 1]; // Input(3), Hidden(6), Output(1)
       default:
         return [];
     }
@@ -424,11 +452,90 @@ function App() {
     setTrainingCompleted(true); // Enable testing immediately
   };
 
+  const handleArchitectureTestComplete = (results: ArchitectureTestResult[]) => {
+    setArchitectureResults(results);
+    setIsTestingArchitectures(false);
+  };
+
+  const handleCrossValidation = async () => {
+    if (!trainerRef.current || !dataset) return;
+    setIsCrossValidating(true);
+
+    const dataToValidate = isUsingCustomDataset ? customDataset : getDefaultDataset();
+    const validator = new CrossValidator(dataToValidate, 5); // 5-fold cross validation
+
+    const results = await validator.runKFoldValidation(
+      trainerRef.current,
+      (metrics, fold) => {
+        console.log(`Fold ${fold} completed:`, metrics);
+      }
+    );
+
+    setCrossValidationResults(results);
+    setIsCrossValidating(false);
+  };
+
+  const handleDatasetChange = (event: SelectChangeEvent<string>) => {
+    const newDataset = event.target.value;
+    setDataset(newDataset);
+    handleReset(); // Reset current state
+    
+    // Create new trainer
+    if (newDataset) {
+      const trainer = createTrainer(newDataset);
+      if (trainer) {
+        trainer.initNetwork(getNetworkArchitecture(newDataset));
+        networkRef.current = trainer;
+        
+        // Initialize visualizations
+        setNetworkActivations(trainer.getActivations());
+        setNetworkWeights(trainer.getWeights());
+        setNetworkBiases(trainer.getBiases());
+      }
+    }
+  };
+
+  const handleUpdateMetrics = async () => {
+    if (!networkRef.current) return;
+    const metrics = await networkRef.current.getPerformanceMetrics();
+    setCurrentMetrics(metrics);
+  };
+
+  useEffect(() => {
+    if (isTraining) {
+      const interval = setInterval(handleUpdateMetrics, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isTraining]);
+
+  useEffect(() => {
+    let animationFrame: number;
+    
+    const updateAnimation = () => {
+      if (isTraining && trainerRef.current) {
+        setNetworkActivations(trainerRef.current.getActivations());
+        setNetworkWeights(trainerRef.current.getWeights());
+        setNetworkBiases(trainerRef.current.getBiases());
+        animationFrame = requestAnimationFrame(updateAnimation);
+      }
+    };
+
+    if (isTraining) {
+      animationFrame = requestAnimationFrame(updateAnimation);
+    }
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [isTraining]);
+
   return (
     <Container className="App">
       <Typography variant="h4" gutterBottom>Neural Network Visualization</Typography>
       
-      <DatasetSelector dataset={dataset} onChange={handleChange} />
+      <DatasetSelector dataset={dataset} onChange={handleDatasetChange} />
       
       {dataset && (
         <>
@@ -509,6 +616,26 @@ function App() {
           
           <MetricsGraph metricsHistory={metricsHistory} />
 
+          <Box sx={{ mt: 2 }}>
+            <ModelArchitectureTester
+              dataset={dataset}
+              onComplete={handleArchitectureTestComplete}
+            />
+            
+            {architectureResults.length > 0 && (
+              <ArchitectureComparisonChart results={architectureResults} />
+            )}
+          </Box>
+
+          <Button
+            variant="contained"
+            onClick={handleCrossValidation}
+            disabled={isTraining || isCrossValidating}
+            sx={{ mt: 2 }}
+          >
+            {isCrossValidating ? 'Cross-validating...' : 'Run Cross-validation'}
+          </Button>
+
           <NeuronViz 
             layers={getNetworkArchitecture(dataset)}
             activations={networkActivations}
@@ -521,11 +648,12 @@ function App() {
             onLearningRateChange={handleLearningRateChange}
             onExportNetwork={handleExportNetwork}
             onImportNetwork={handleImportNetwork}
-            performanceMetrics={trainerRef.current?.getPerformanceMetrics()}
+            performanceMetrics={currentMetrics || undefined}
             trainingSpeed={trainingSpeed}
             onTrainingSpeedChange={handleTrainingSpeedChange}
             onArchitectureChange={handleArchitectureChange}
           />
+        
           
           {!isTraining && iteration > 0 && (
             <>
@@ -564,6 +692,17 @@ function App() {
             </Tooltip>
             <ModelUploader onModelUpload={handleModelUpload} />
           </Box>
+
+          {prediction.length > 0 && (
+            <ProbabilityDistribution 
+              prediction={prediction}
+              dataset={dataset}
+            />
+          )}
+
+          {crossValidationResults.length > 0 && (
+            <CrossValidationResults results={crossValidationResults} />
+          )}
         </>
       )}
     </Container>

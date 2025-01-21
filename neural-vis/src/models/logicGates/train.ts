@@ -1,8 +1,9 @@
 import * as brain from 'brain.js';
 import { logicGateData } from './data';
 import { ITrainer, TrainingOptions, TrainerProgress, PerformanceMetrics } from '../TrainerInterface';
+import { OptimizedTrainerBase } from '../OptimizedTrainerBase';
 
-export class LogicGateTrainer implements ITrainer {
+export class LogicGateTrainer extends OptimizedTrainerBase implements ITrainer {
   protected network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
   private isPaused: boolean = false;
@@ -18,6 +19,7 @@ export class LogicGateTrainer implements ITrainer {
   private trainingData: any[];
 
   constructor(customDataset?: any[]) {
+    super();
     this.trainingData = customDataset || logicGateData.training;
     this.initNetwork();
   }
@@ -249,40 +251,16 @@ export class LogicGateTrainer implements ITrainer {
     }
   }
 
-  getPerformanceMetrics(): PerformanceMetrics {
-    if (!this.network || !this.isTraining && this.currentEpoch === 0) {
-      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
-    }
+  async getPerformanceMetrics(): Promise<PerformanceMetrics> {
+    return super.getPerformanceMetrics();
+  }
 
-    try {
-      let correct = 0;
-      let truePositives = 0;
-      let falsePositives = 0;
-      let falseNegatives = 0;
+  // Implement required abstract methods
+  protected getPredictions(): number[][] {
+    return this.trainingData.map(data => this.predict(data.input));
+  }
 
-      this.trainingData.forEach(data => {
-        const prediction = this.predict(data.input);
-        const predictedClass = prediction.indexOf(Math.max(...prediction));
-        const expectedClass = data.output.indexOf(1);
-
-        if (predictedClass === expectedClass) {
-          correct++;
-        }
-        if (predictedClass === 0 && expectedClass === 0) truePositives++;
-        if (predictedClass === 0 && expectedClass === 1) falsePositives++;
-        if (predictedClass === 1 && expectedClass === 0) falseNegatives++;
-      });
-
-      const total = this.trainingData.length;
-      const accuracy = correct / total;
-      const precision = truePositives / (truePositives + falsePositives) || 0;
-      const recall = truePositives / (truePositives + falseNegatives) || 0;
-      const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
-
-      return { accuracy, precision, recall, f1Score };
-    } catch (error) {
-      console.error('Error calculating metrics:', error);
-      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
-    }
+  protected getActualValues(): number[][] {
+    return this.trainingData.map(data => data.output);
   }
 }

@@ -9,7 +9,8 @@ import {
   Select, 
   MenuItem,
   TextField,
-  Slider
+  Slider,
+  LinearProgress
 } from '@mui/material';
 
 interface TestingInterfaceProps {
@@ -20,6 +21,49 @@ interface TestingInterfaceProps {
   onTest: () => void;
   onReset: () => void;
 }
+
+const ProbabilityDistribution: React.FC<{
+  prediction: number[];
+  dataset: string;
+}> = ({ prediction, dataset }) => {
+  const getLabels = (): string[] => {
+    switch(dataset) {
+      case 'logicGates':
+        return ['True (1)', 'False (0)'];
+      case 'fitnessClassification':
+        return ['Fit', 'Average', 'Unfit'];
+      case 'weatherPrediction':
+        return ['Rain Probability'];
+      default:
+        return [];
+    }
+  };
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="h6">Output Probabilities</Typography>
+      {prediction.map((prob, idx) => (
+        <Box key={idx} sx={{ mb: 1 }}>
+          <Typography variant="body2">
+            {getLabels()[idx]}: {(prob * 100).toFixed(2)}%
+          </Typography>
+          <LinearProgress 
+            variant="determinate" 
+            value={prob * 100}
+            sx={{
+              height: 10,
+              borderRadius: 1,
+              backgroundColor: 'rgba(0,0,0,0.1)',
+              '& .MuiLinearProgress-bar': {
+                backgroundColor: prob > 0.5 ? 'success.main' : 'primary.main'
+              }
+            }}
+          />
+        </Box>
+      ))}
+    </Box>
+  );
+};
 
 export const TestingInterface: React.FC<TestingInterfaceProps> = ({
   dataset,
@@ -207,10 +251,10 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             {dataset === 'logicGates' && (
               <>
                 <Typography>
-                  Probability of Output 0: {((1 - prediction[0]) * 100).toFixed(2)}%
+                  True (1): {(prediction[0] * 100).toFixed(2)}%
                 </Typography>
                 <Typography>
-                  Probability of Output 1: {(prediction[0] * 100).toFixed(2)}%
+                  False (0): {(prediction[1] * 100).toFixed(2)}%
                 </Typography>
               </>
             )}
@@ -222,16 +266,19 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             {dataset === 'fitnessClassification' && (
               <>
                 <Typography>
-                  Fitness Level: {prediction[0] >= 0.66 ? 'Fit' : 
-                                prediction[0] >= 0.33 ? 'Average' : 'Unfit'}
+                  Fit: {(prediction[0] * 100).toFixed(2)}%
                 </Typography>
                 <Typography>
-                  Confidence: {(prediction[0] * 100).toFixed(2)}%
+                  Average: {(prediction[1] * 100).toFixed(2)}%
+                </Typography>
+                <Typography>
+                  Unfit: {(prediction[2] * 100).toFixed(2)}%
                 </Typography>
               </>
             )}
           </Box>
         )}
+        <ProbabilityDistribution prediction={prediction} dataset={dataset} />
       </Box>
       <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
         <Typography variant="h6">Prediction: {interpretPrediction(prediction)}</Typography>

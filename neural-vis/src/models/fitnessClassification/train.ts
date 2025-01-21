@@ -1,8 +1,9 @@
 import * as brain from 'brain.js';
 import { fitnessData } from './data';
 import { ITrainer, TrainingOptions, TrainerProgress, PerformanceMetrics } from '../TrainerInterface';
+import { OptimizedTrainerBase } from '../OptimizedTrainerBase';
 
-export class FitnessTrainer implements ITrainer {
+export class FitnessTrainer extends OptimizedTrainerBase implements ITrainer {
   protected network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
   private isPaused: boolean = false;
@@ -18,6 +19,7 @@ export class FitnessTrainer implements ITrainer {
   private trainingData: any[];
 
   constructor(customDataset?: any[]) {
+    super();
     this.trainingData = customDataset || fitnessData.training;
     this.initNetwork();
     // Initialize with valid training options
@@ -28,7 +30,7 @@ export class FitnessTrainer implements ITrainer {
       learningRate: 0.01
     });
   }
-
+  
   getNetwork(): brain.NeuralNetwork {
     return this.network;
   }
@@ -248,74 +250,16 @@ export class FitnessTrainer implements ITrainer {
     }
   }
 
-  getPerformanceMetrics(): PerformanceMetrics {
-    if (!this.network || !this.isTraining && this.currentEpoch === 0) {
-      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
-    }
-
-    try {
-      let correct = 0;
-      const total = this.trainingData.length;
-      const confusionMatrix = {
-        fit: { tp: 0, fp: 0, fn: 0 },
-        average: { tp: 0, fp: 0, fn: 0 },
-        unfit: { tp: 0, fp: 0, fn: 0 }
-      };
-      
-      this.trainingData.forEach(data => {
-        const prediction = this.predict(data.input);
-        const predictedClass = prediction.indexOf(Math.max(...prediction));
-        const expectedClass = data.output.indexOf(1);
-        
-        if (predictedClass === expectedClass) {
-          correct++;
-          // Count true positives for each class
-          switch(predictedClass) {
-            case 0: confusionMatrix.fit.tp++; break;
-            case 1: confusionMatrix.average.tp++; break;
-            case 2: confusionMatrix.unfit.tp++; break;
-          }
-        } else {
-          // Count false positives and negatives
-          switch(predictedClass) {
-            case 0: confusionMatrix.fit.fp++; break;
-            case 1: confusionMatrix.average.fp++; break;
-            case 2: confusionMatrix.unfit.fp++; break;
-          }
-          switch(expectedClass) {
-            case 0: confusionMatrix.fit.fn++; break;
-            case 1: confusionMatrix.average.fn++; break;
-            case 2: confusionMatrix.unfit.fn++; break;
-          }
-        }
-      });
-
-      const accuracy = correct / total;
-
-      // Calculate macro-averaged metrics
-      const metrics = ['fit', 'average', 'unfit'].map(cls => {
-        const tp = confusionMatrix[cls as keyof typeof confusionMatrix].tp;
-        const fp = confusionMatrix[cls as keyof typeof confusionMatrix].fp;
-        const fn = confusionMatrix[cls as keyof typeof confusionMatrix].fn;
-        return {
-          precision: tp / (tp + fp) || 0,
-          recall: tp / (tp + fn) || 0
-        };
-      });
-
-      const precision = metrics.reduce((sum, m) => sum + m.precision, 0) / 3;
-      const recall = metrics.reduce((sum, m) => sum + m.recall, 0) / 3;
-      const f1Score = 2 * (precision * recall) / (precision + recall) || 0;
-
-      return {
-        accuracy,
-        precision,
-        recall,
-        f1Score
-      };
-    } catch (error) {
-      console.error('Error calculating metrics:', error);
-      return { accuracy: 0, precision: 0, recall: 0, f1Score: 0 };
-    }
+  async getPerformanceMetrics(): Promise<PerformanceMetrics> {
+    return super.getPerformanceMetrics();
   }
+
+    // Implement required abstract methods
+    protected getPredictions(): number[][] {
+      return this.trainingData.map(data => this.predict(data.input));
+    }
+  
+    protected getActualValues(): number[][] {
+      return this.trainingData.map(data => data.output);
+    }
 }
