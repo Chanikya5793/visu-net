@@ -55,14 +55,16 @@ A powerful Neural Network Visualization Tool built with React and TypeScript tha
 - Modern web browser (Chrome, Firefox, or Safari recommended)
 
 ### One-Line Installation (Unix/macOS/Linux)
-```bash copy
+
+```bash
 git clone https://github.com/Chanakya5793/visu-net.git && cd visu-net/neural-vis && npm install && npm start
 ```
 
 ### Step-by-Step Installation
 
 1. Clone the repository:
-```bash copy
+
+```bash
 git clone https://github.com/Chanakya5793/visu-net.git
 cd visu-net/neural-vis
 ```
@@ -70,14 +72,16 @@ cd visu-net/neural-vis
 2. Install dependencies:
 
 ### Using npm (recommended for all platforms):
-```bash copy
+
+```bash
 npm install
 ```
 
 ### Alternative installation using requirements.txt:
 
 #### On macOS/Linux:
-```bash copy
+
+```bash
 # Navigate to the neural-vis directory first
 cd visu-net/neural-vis
 
@@ -89,7 +93,8 @@ yarn install
 ```
 
 #### On Windows (PowerShell):
-```powershell copy
+
+```powershell
 # Navigate to the neural-vis directory first
 cd visu-net\neural-vis
 
@@ -101,7 +106,8 @@ yarn install
 ```
 
 #### On Windows (Command Prompt):
-```cmd copy
+
+```cmd
 # Navigate to the neural-vis directory first
 cd visu-net\neural-vis
 
@@ -208,6 +214,12 @@ type requirements.txt
 
 ```cmd
 type requirements.txt
+
+# Navigate to the neural-vis directory first
+cd visu-net\neural-vis
+
+# Install all dependencies from requirements.txt
+npm install $(cat requirements.txt | Out-String).Split("`n") -save
 ```
 
 ### macOS/Linux:
@@ -258,7 +270,8 @@ For a complete list of dependencies and their exact versions, see `requirements.
 ## Development
 
 ### Available Scripts
-```bash copy
+
+```bash
 # Start development server
 npm start
 
@@ -276,7 +289,8 @@ npm run format
 ```
 
 ### Environment Variables
-```env copy
+
+```env
 REACT_APP_API_URL=your_api_url
 REACT_APP_DEBUG_MODE=true
 REACT_APP_VERSION=$npm_package_version
