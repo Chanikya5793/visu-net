@@ -14,7 +14,7 @@ import {
   Tooltip as RechartsTooltip,
   TooltipProps
 } from 'recharts';
-
+import {WeightDistribution} from './WeightDistributionPropsNew';
 // At the top of NeuronViz.tsx after imports
 const styles = {
   tooltipContainer: {
@@ -255,17 +255,17 @@ const ActivationPatterns: React.FC<ActivationPatternsProps> = ({
     </Box>
   );
 };
-
+{/*
 interface WeightDistributionProps {
   weights: number[][][];
 }
-
+*/}
 // Create a type for our chart data
 interface ChartData {
   weight: string;
   count: number;
 }
-
+{/*
 // Update WeightDistribution component with proper typing
 const WeightDistribution: React.FC<WeightDistributionProps> = ({ weights }) => {
   const allWeights = weights.flat(2);
@@ -320,7 +320,7 @@ const WeightDistribution: React.FC<WeightDistributionProps> = ({ weights }) => {
     </Paper>
   );
 };
-
+*/}
 // Add new components for the enhancements
 const TrainingSpeedControl: React.FC<{
   speed: number;

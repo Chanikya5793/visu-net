@@ -8,7 +8,7 @@ import { DatasetSelector } from './components/DatasetSelector';
 import { DatasetViewer } from './components/DatasetViewer';
 import { MetricsGraph } from './components/MetricsGraph';
 import { ModelUploader } from './components/ModelUploader';
-import { NeuronViz } from './components/NeuronViz';
+import { NeuronViz } from './components/NeuronVizEX';
 import { TestingInterface } from './components/TestingInterface';
 import { TestModelButton } from './components/TestModelButton';
 import { TrainingControls } from './components/TrainingControls';
