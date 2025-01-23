@@ -1,6 +1,6 @@
 // src/components/TrainingMetrics.tsx
+import { Box, LinearProgress, Typography } from '@mui/material';
 import React from 'react';
-import { Box, Typography, LinearProgress } from '@mui/material';
 
 interface TrainingMetricsProps {
     iteration: number;
@@ -16,37 +16,41 @@ export const TrainingMetrics: React.FC<TrainingMetricsProps> = ({
     loss,
     accuracy,
     isTraining
-}) => (
-    <>
-    {(isTraining || iteration > 0) && (
-      <Box sx={{ mt: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-        <Typography variant="h6" gutterBottom>Training Progress</Typography>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          <Box>
-            <Typography color="textSecondary">Current Epoch</Typography>
-            <Typography variant="h6">{iteration}/{epochs}</Typography>
-          </Box>
-          <Box>
-            <Typography color="textSecondary">Progress</Typography>
-            <Typography variant="h6">{((iteration/epochs) * 100).toFixed(1)}%</Typography>
-          </Box>
-          <Box>
-            <Typography color="textSecondary">Loss</Typography>
-            <Typography variant="h6">{loss.toFixed(6)}</Typography>
-          </Box>
-          <Box>
-            <Typography color="textSecondary">Accuracy</Typography>
-            <Typography variant="h6">{(accuracy * 100).toFixed(2)}%</Typography>
-          </Box>
+}) => {
+    const progress = (iteration/epochs) * 100;
+    
+    return (
+        <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Typography variant="h6" gutterBottom>Training Progress</Typography>
+            {isTraining ? (
+                <Box sx={{ width: '100%' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" color="textSecondary">
+                            Epoch {iteration} of {epochs}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                            {progress.toFixed(1)}%
+                        </Typography>
+                    </Box>
+                    <LinearProgress 
+                        variant="determinate" 
+                        value={progress} 
+                        sx={{ mb: 2, height: 8, borderRadius: 1 }}
+                    />
+                    <Box sx={{ display: 'flex', gap: 4, justifyContent: 'space-around' }}>
+                        <Box>
+                            <Typography color="textSecondary">Loss</Typography>
+                            <Typography variant="h6">{Number(loss).toFixed(6)}</Typography>
+                        </Box>
+                        <Box>
+                            <Typography color="textSecondary">Accuracy</Typography>
+                            <Typography variant="h6">{Number(accuracy * 100).toFixed(2)}%</Typography>
+                        </Box>
+                    </Box>
+                </Box>
+            ) : (
+                <Typography color="textSecondary">Training not in progress</Typography>
+            )}
         </Box>
-        {isTraining && (
-          <LinearProgress 
-            variant="determinate" 
-            value={(iteration/epochs) * 100} 
-            sx={{ mt: 2 }}
-          />
-        )}
-      </Box>
-    )}
-  </>
-);
+    );
+};

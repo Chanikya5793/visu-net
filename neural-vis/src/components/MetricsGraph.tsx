@@ -1,62 +1,45 @@
 // src/components/MetricsGraph.tsx
-import React from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, Legend, ResponsiveContainer 
-} from 'recharts';
 import { Box, Typography } from '@mui/material';
+import React from 'react';
+import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-interface MetricPoint {
-  epoch: number;
-  loss: number;
-  accuracy: number;
+export interface MetricsGraphProps {
+  data: {
+    epoch: number;
+    loss: number;
+    accuracy: number;
+  }[];
+  title?: string;
 }
 
-interface MetricsGraphProps {
-  metricsHistory: MetricPoint[];
-}
-
-export const MetricsGraph: React.FC<MetricsGraphProps> = ({ metricsHistory }) => (
-  <Box sx={{ mt: 4, height: 400 }}>
-    <Typography variant="h6" gutterBottom>Training Metrics</Typography>
-    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-      {/* Loss Graph */}
-      <Box sx={{ height: 300, width: '100%' }}>
-        <ResponsiveContainer>
-          <LineChart
-            data={metricsHistory}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="epoch" label={{ value: 'Epochs', position: 'bottom' }} />
-            <YAxis label={{ value: 'Loss', angle: -90, position: 'insideLeft' }} />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="loss" stroke="#8884d8" name="Loss" />
-          </LineChart>
-        </ResponsiveContainer>
-      </Box>
-
-      {/* Accuracy Graph */}
-      <Box sx={{ height: 300, width: '100%' }}>
-        <ResponsiveContainer>
-          <LineChart
-            data={metricsHistory}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="epoch" label={{ value: 'Epochs', position: 'bottom' }} />
-            <YAxis 
-              label={{ value: 'Accuracy', angle: -90, position: 'insideLeft' }}
-              domain={[0, 1]}
-              tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
-            />
-            <Tooltip formatter={(value) => `${(Number(value) * 100).toFixed(2)}%`} />
-            <Legend />
-            <Line type="monotone" dataKey="accuracy" stroke="#82ca9d" name="Accuracy" />
-          </LineChart>
-        </ResponsiveContainer>
-      </Box>
+export const MetricsGraph: React.FC<MetricsGraphProps> = ({ data, title }) => {
+  return (
+    <Box sx={{ width: '100%', height: '100%' }}>
+      {title && (
+        <Typography variant="subtitle2" gutterBottom>
+          {title}
+        </Typography>
+      )}
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={data}>
+          <XAxis dataKey="epoch" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line 
+            type="monotone" 
+            dataKey="loss" 
+            stroke="#f44336" 
+            name="Loss"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="accuracy" 
+            stroke="#4caf50" 
+            name="Accuracy"
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </Box>
-  </Box>
-);
+  );
+};

@@ -1,16 +1,15 @@
 // src/components/TestingInterface.tsx
-import React from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  FormControl, 
-  InputLabel, 
-  Select, 
+import {
+  Box,
+  Button,
+  FormControl,
+  InputLabel,
   MenuItem,
-  TextField,
-  Slider
+  Select,
+  Slider,
+  Typography
 } from '@mui/material';
+import React from 'react';
 
 interface TestingInterfaceProps {
   dataset: string;
@@ -207,10 +206,10 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             {dataset === 'logicGates' && (
               <>
                 <Typography>
-                  Probability of Output 0: {((1 - prediction[0]) * 100).toFixed(2)}%
+                  Probability of True (1): {(prediction[0] * 100).toFixed(2)}%
                 </Typography>
                 <Typography>
-                  Probability of Output 1: {(prediction[0] * 100).toFixed(2)}%
+                  Probability of False (0): {(prediction[1] * 100).toFixed(2)}%
                 </Typography>
               </>
             )}

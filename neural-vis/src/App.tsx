@@ -220,7 +220,7 @@ function App() {
 
   const handleEnableTesting = () => {
     setShowTestingInterface(true);
-  };
+  };  
 
   const getNetworkArchitecture = (selectedDataset: string): number[] => {
     switch(selectedDataset) {
@@ -507,7 +507,7 @@ function App() {
             isTraining={isTraining}
           />
           
-          <MetricsGraph metricsHistory={metricsHistory} />
+          <MetricsGraph data={metricsHistory} />
 
           <NeuronViz 
             layers={getNetworkArchitecture(dataset)}

@@ -10,6 +10,7 @@ export interface ITrainer {
   getWeights(): number[][][];
   getBiases(): number[][];
   getActivations(): number[][];
+  getGradients(): number[][][];
   adjustWeight(layerIndex: number, fromNeuron: number, toNeuron: number, newWeight: number): void;
   setLearningRate(rate: number): void;
   exportNetwork(): string;
@@ -17,6 +18,7 @@ export interface ITrainer {
   getPerformanceMetrics(): PerformanceMetrics;
   initNetwork(layers?: number[]): void;
   getNetwork(): brain.NeuralNetwork;
+  normalizeWeights?(): void;
 }
 
 export interface TrainingOptions {
@@ -32,6 +34,7 @@ export interface TrainerProgress {
   totalEpochs: number;
   lastError: number;
   isTraining: boolean;
+  gradientNorm?: number;
 }
 
 export interface PerformanceMetrics {

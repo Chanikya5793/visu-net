@@ -6,7 +6,7 @@ export interface NeuronVizProps {
   dataset: string;
   isTraining: boolean;
   onWeightAdjust?: (layerIndex: number, fromNeuron: number, toNeuron: number, newWeight: number) => void;
-  gradients?: number[][];
+  gradients?: number[][][];
   learningRate?: number;
   onLearningRateChange?: (newRate: number) => void;
   onExportNetwork?: () => void;

@@ -1,7 +1,16 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "target": "es2020",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext",
+      "es2020",
+      "es2015.promise",
+      "es2015.collection",
+      "es2015.iterable",
+      "es2015.symbol"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -14,8 +23,13 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx",
-    "typeRoots": ["./src/types", "./node_modules/@types"]
+    "jsx": "preserve",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

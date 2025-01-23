@@ -1,6 +1,6 @@
 import * as brain from 'brain.js';
+import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
 import { weatherData } from './data';
-import { ITrainer, TrainingOptions, TrainerProgress, PerformanceMetrics } from '../TrainerInterface';
 
 export class WeatherTrainer implements ITrainer {
   protected network!: brain.NeuralNetwork;
@@ -13,20 +13,21 @@ export class WeatherTrainer implements ITrainer {
   private activations: number[][] = [];
   private weights: number[][][] = [];
   private biases: number[][] = [];
-  private gradients: number[][] = [];
+  private gradients: number[][][] = [];
   private learningRate: number = 0.01;
   private trainingData: any[];
 
   constructor(customDataset?: any[]) {
     this.trainingData = customDataset || weatherData.training;
     this.initNetwork();
-    // Initialize with valid training options
+    // Initialize with valid training options and higher learning rate
     this.network.train(this.trainingData, {
       iterations: 1,
       errorThresh: 0.01,
       log: false,
-      learningRate: 0.01
+      learningRate: 0.03  // Increased learning rate
     });
+    this.normalizeWeights();  // Initialize weights properly
   }
 
   getNetwork(): brain.NeuralNetwork {
@@ -34,11 +35,119 @@ export class WeatherTrainer implements ITrainer {
   }
 
   initNetwork(layers?: number[]): void {
+    const inputSize = this.trainingData[0].input.length;
+    const outputSize = this.trainingData[0].output.length;
+    const layerSize = layers?.[0] || Math.max(4, Math.ceil((inputSize + outputSize) / 2));
+    
     this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [3], // Adjust layers per trainer
-      activation: 'sigmoid',
+      hiddenLayers: layers || [layerSize],
+      activation: 'leaky-relu',
       learningRate: this.learningRate
     });
+
+    // Initialize with balanced data distribution
+    const dummyData = {
+      input: Array(inputSize).fill(0).map(() => Math.random() * 2 - 1),
+      output: Array(outputSize).fill(0)
+    };
+    this.network.train([dummyData], {
+      iterations: 1,
+      errorThresh: 0.01,
+      log: false
+    });
+
+    // Enhanced Xavier/Glorot initialization with layer-specific scaling
+    const networkState = this.network.toJSON();
+    networkState.layers.forEach((layer: any, idx: number) => {
+      if (!layer.weights) return;
+
+      // Calculate fan in/out with improved connectivity
+      const fanIn = idx === 0 ? inputSize : 
+        (networkState.layers[idx - 1]?.weights?.[0]?.length || inputSize);
+      const fanOut = layer.weights[0]?.length || outputSize;
+      
+      // Layer-specific scaling factors
+      const scale = Math.sqrt(2.0 / (fanIn + fanOut));
+      const layerPosition = idx / (networkState.layers.length - 1); // 0 to 1
+      const positionScale = 0.8 + 0.4 * Math.sin(layerPosition * Math.PI); // Varies between 0.8 and 1.2
+
+      // Initialize weights with position-dependent scaling
+      layer.weights = layer.weights.map((neuronWeights: number[], neuronIdx: number) => {
+        const neuronPosition = neuronIdx / layer.weights.length;
+        const neuronScale = scale * positionScale * (0.9 + 0.2 * Math.cos(neuronPosition * Math.PI));
+        
+        return neuronWeights.map((_, inputIdx: number) => {
+          const inputPosition = inputIdx / neuronWeights.length;
+          const connectionStrength = 0.8 + 0.4 * Math.sin((inputPosition + neuronPosition) * Math.PI);
+          return (Math.random() * 2 - 1) * neuronScale * connectionStrength;
+        });
+      });
+
+      // Initialize biases with position-dependent values
+      if (layer.biases) {
+        layer.biases = layer.biases.map((_: any, i: number) => {
+          const position = i / layer.biases.length;
+          return 0.01 * Math.sin(position * Math.PI);
+        });
+      }
+    });
+
+    this.network.fromJSON(networkState);
+    this.updateNetworkState();
+  }
+
+  normalizeWeights(): void {
+    const networkState = this.network.toJSON();
+    
+    networkState.layers.forEach((layer: any, layerIdx: number) => {
+      if (!layer.weights) return;
+
+      // Calculate layer-wise statistics
+      const allWeights = layer.weights.flat();
+      const globalMean = allWeights.reduce((sum: number, w: number) => sum + w, 0) / allWeights.length;
+      const globalStd = Math.sqrt(
+        allWeights.reduce((sum: number, w: number) => sum + Math.pow(w - globalMean, 2), 0) / allWeights.length
+      );
+
+      layer.weights.forEach((neuronWeights: number[], neuronIdx: number) => {
+        // Calculate neuron-specific statistics
+        const mean = neuronWeights.reduce((sum: number, w: number) => sum + w, 0) / neuronWeights.length;
+        const variance = neuronWeights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / neuronWeights.length;
+        const localStd = Math.sqrt(variance);
+
+        if (localStd > 0) {
+          // Normalize weights while preserving relative importance
+          const targetMean = globalMean * 0.1; // Reduce mean to prevent saturation
+          const targetStd = globalStd * (0.8 + 0.4 * Math.sin(neuronIdx * Math.PI / layer.weights.length));
+          
+          layer.weights[neuronIdx] = neuronWeights.map((w: number, idx: number) => {
+            const normalized = (w - mean) / localStd;
+            const scaled = normalized * targetStd + targetMean;
+            const position = idx / neuronWeights.length;
+            return scaled * (0.9 + 0.2 * Math.sin(position * Math.PI));
+          });
+        } else {
+          // Initialize with small random variations if all weights are the same
+          const baseValue = mean * 0.1;
+          layer.weights[neuronIdx] = neuronWeights.map((_: number, idx: number) => {
+            const position = idx / neuronWeights.length;
+            return baseValue + (Math.random() * 0.02 - 0.01) * Math.sin(position * Math.PI);
+          });
+        }
+      });
+
+      // Adjust biases to maintain activation distribution
+      if (layer.biases) {
+        const layerScale = 0.8 + 0.4 * Math.sin(layerIdx * Math.PI / networkState.layers.length);
+        layer.biases = layer.biases.map((_: number, idx: number) => {
+          const position = idx / layer.biases.length;
+          return 0.01 * layerScale * Math.sin(position * Math.PI);
+        });
+      }
+    });
+
+    this.network.fromJSON(networkState);
+    this.updateNetworkState();
   }
 
   async train(options: TrainingOptions): Promise<void> {
@@ -167,7 +276,18 @@ export class WeatherTrainer implements ITrainer {
       if (layer.biases) {
         return layer.biases.map((_: any, i: number) => {
           const weights = layer.weights[i] || [];
-          return Math.tanh(weights.reduce((sum: number, w: number) => sum + w, 0) + layer.biases[i]);
+          // Apply Xavier/Glorot scaling factor with safety check
+          const scalingFactor = 1.0 / Math.sqrt(Math.max(weights.length, 1));
+          
+          // Calculate normalized weighted sum with proper scaling and NaN prevention
+          const weightedSum = weights.reduce((sum: number, w: number) => {
+            const scaled = Number.isFinite(w * scalingFactor) ? w * scalingFactor : 0;
+            return Number.isFinite(sum + scaled) ? sum + scaled : sum;
+          }, 0) + (Number.isFinite(layer.biases[i]) ? layer.biases[i] : 0);
+          
+          // Updated leaky ReLU with safety checks
+          return Number.isFinite(weightedSum) ? 
+            (weightedSum > 0 ? weightedSum : 0.02 * weightedSum) : 0;
         });
       }
       return [];
@@ -177,25 +297,99 @@ export class WeatherTrainer implements ITrainer {
   private updateNetworkState(): void {
     const networkState = this.network.toJSON();
     
-    // Include input layer activations
+    // Calculate layer-wise statistics with safety checks
+    const layerStats = networkState.layers.map((layer: any) => {
+      const weights = layer.weights || [];
+      const flatWeights = weights.flat().filter((w: number) => Number.isFinite(w));
+      const count = Math.max(flatWeights.length, 1);
+      const mean = flatWeights.reduce((sum: number, w: number) => 
+        Number.isFinite(sum + w) ? sum + w : sum, 0) / count;
+      const variance = flatWeights.reduce((sum: number, w: number) => {
+        const diff = Number.isFinite(w - mean) ? (w - mean) ** 2 : 0;
+        return Number.isFinite(sum + diff) ? sum + diff : sum;
+      }, 0) / count;
+      return { 
+        mean: Number.isFinite(mean) ? mean : 0, 
+        stdDev: Math.sqrt(Number.isFinite(variance) ? variance : 1) 
+      };
+    });
+
+    // Initialize activations with improved scaling and safety checks
     this.activations = [
-      // Add input layer activations
-      networkState.layers[0].weights[0] || [], // Input layer
-      // Add hidden and output layer activations
-      ...networkState.layers.map((layer: any) => {
+      // Input layer with protected scaling
+      (networkState.layers[0].weights[0] || []).map((w: number) => {
+        const stdDev = layerStats[0].stdDev + 1e-6;
+        return Number.isFinite(w / stdDev) ? w / stdDev : 0;
+      }),
+      // Hidden and output layers with protected calculations
+      ...networkState.layers.map((layer: any, idx: number) => {
         if (layer.biases) {
           return layer.biases.map((_: any, i: number) => {
             const weights = layer.weights[i] || [];
-            return Math.tanh(weights.reduce((sum: number, w: number) => sum + w, 0) + layer.biases[i]);
+            const stdDev = layerStats[idx].stdDev + 1e-6;
+            const scaledSum = weights.reduce((sum: number, w: number) => {
+              const scaled = Number.isFinite(w / stdDev) ? w / stdDev : 0;
+              return Number.isFinite(sum + scaled) ? sum + scaled : sum;
+            }, 0);
+            const weightedSum = Number.isFinite(scaledSum + layer.biases[i]) ? 
+              scaledSum + layer.biases[i] : scaledSum;
+            return weightedSum > 0 ? weightedSum : 0.02 * weightedSum;
           });
         }
         return [];
       })
     ];
 
-    // Store weights and biases
-    this.weights = networkState.layers.map((layer: any) => layer.weights || []);
-    this.biases = networkState.layers.map((layer: any) => layer.biases || []);
+    // Store normalized weights and biases with safety checks
+    this.weights = networkState.layers.map((layer: any, idx: number) => 
+      (layer.weights || []).map((row: number[]) => 
+        row.map((w: number) => {
+          const stdDev = layerStats[idx].stdDev + 1e-6;
+          return Number.isFinite(w / stdDev) ? w / stdDev : 0;
+        })));
+    this.biases = networkState.layers.map((layer: any) => 
+      (layer.biases || []).map((b: number) => Number.isFinite(b) ? b : 0));
+    
+    this.calculateGradients();
+  }
+
+  private calculateGradients(): void {
+    const networkState = this.network.toJSON();
+    this.gradients = [];
+    
+    // Calculate layer-wise gradient statistics with safety checks
+    for (let layerIndex = 1; layerIndex < networkState.layers.length; layerIndex++) {
+      const layer = networkState.layers[layerIndex];
+      const prevLayer = networkState.layers[layerIndex - 1];
+      const layerGradients: number[][] = [];
+
+      if (layer.weights && prevLayer) {
+        const layerStats = this.calculateLayerStats(layer.weights);
+        
+        layer.weights.forEach((neuronWeights: number[], toNeuron: number) => {
+          const neuronGradients: number[] = [];
+          const toActivation = this.activations[layerIndex][toNeuron];
+          
+          neuronWeights.forEach((weight: number, fromNeuron: number) => {
+            const fromActivation = this.activations[layerIndex - 1][fromNeuron];
+            const activationGradient = toActivation > 0 ? 1 : 0.02;  // Enhanced leaky ReLU derivative
+            const scaledGradient = (fromActivation * activationGradient) / (layerStats.stdDev + 1e-6);
+            neuronGradients.push(scaledGradient);
+          });
+          
+          layerGradients.push(neuronGradients);
+        });
+      }
+      
+      this.gradients.push(layerGradients);
+    }
+  }
+
+  private calculateLayerStats(weights: number[][]): { mean: number; stdDev: number } {
+    const flatWeights = weights.flat();
+    const mean = flatWeights.reduce((sum, w) => sum + w, 0) / flatWeights.length;
+    const variance = flatWeights.reduce((sum, w) => sum + (w - mean) ** 2, 0) / flatWeights.length;
+    return { mean, stdDev: Math.sqrt(variance || 1) };
   }
 
   getWeights(): number[][][] {
@@ -210,6 +404,10 @@ export class WeatherTrainer implements ITrainer {
     return this.activations;
   }
 
+  getGradients(): number[][][] {
+    return this.gradients;
+  }
+
   adjustWeight(layerIndex: number, fromNeuron: number, toNeuron: number, newWeight: number): void {
     const networkState = this.network.toJSON();
     
@@ -218,6 +416,7 @@ export class WeatherTrainer implements ITrainer {
       networkState.layers[layerIndex].weights[toNeuron][fromNeuron] = newWeight;
       this.network.fromJSON(networkState);
       this.updateNetworkState();
+      this.normalizeWeights();  // Normalize after weight adjustment
     }
   }
 

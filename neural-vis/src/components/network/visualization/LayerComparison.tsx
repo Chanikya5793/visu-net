@@ -36,19 +36,54 @@ export const LayerComparison: React.FC<LayerComparisonProps> = ({
         {layers.map((neurons, idx) => (
           <Box key={idx} sx={{ minWidth: 150 }}>
             <Typography variant="subtitle2">{`Layer ${idx}`}</Typography>
-            <Box sx={{ height: 150, display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-              {activations?.[idx]?.map((value, neuronIdx) => (
-                <Box
-                  key={neuronIdx}
-                  sx={{
-                    width: '8px',
-                    height: `${value * 100}%`,
-                    bgcolor: `rgba(33, 150, 243, ${value})`,
-                    transition: 'height 0.3s'
-                  }}
-                  title={`Neuron ${neuronIdx}: ${value.toFixed(4)}`}
-                />
-              ))}
+            <Box 
+              sx={{ 
+                height: 150, 
+                display: 'flex', 
+                alignItems: 'flex-end', 
+                gap: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: 1,
+                bgcolor: 'background.paper',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              {activations?.[idx]?.map((value, neuronIdx) => {
+                // Ensure value is between 0 and 1
+                const normalizedValue = Math.min(Math.max(value, 0), 1);
+                return (
+                  <Box
+                    key={neuronIdx}
+                    sx={{
+                      flex: 1,
+                      minWidth: '8px',
+                      height: `${normalizedValue * 90}%`, // Use 90% to leave some padding
+                      bgcolor: `rgba(33, 150, 243, ${Math.max(normalizedValue, 0.1)})`,
+                      transition: 'height 0.3s',
+                      borderRadius: '4px 4px 0 0',
+                      position: 'relative',
+                      '&:hover::after': {
+                        content: `'${value.toFixed(4)}'`,
+                        position: 'absolute',
+                        top: '-24px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        bgcolor: 'background.paper',
+                        color: 'text.primary',
+                        p: '4px 8px',
+                        borderRadius: 1,
+                        fontSize: '0.75rem',
+                        whiteSpace: 'nowrap',
+                        boxShadow: 1,
+                        zIndex: 1
+                      }
+                    }}
+                  />
+                );
+              })}
             </Box>
           </Box>
         ))}
