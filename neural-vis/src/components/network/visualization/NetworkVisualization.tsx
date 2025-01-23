@@ -546,11 +546,23 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       {/* Network Visualization Section */}
       <Box sx={{ 
         width: '100%', 
+        maxWidth: '100vw',
         display: 'flex', 
         justifyContent: 'center',
-        overflow: 'auto'
+        overflow: 'auto',
+        padding: { xs: 2, sm: 3 },
+        backgroundColor: 'background.paper',
+        borderRadius: 1,
+        boxShadow: 1,
+        '& svg': {
+          maxWidth: '100%',
+          height: 'auto',
+          minHeight: { xs: 400, sm: 500, md: 600 },
+          transform: 'scale(0.9)',
+          transformOrigin: 'center center'
+        }
       }}>
-        <svg ref={svgRef} width={width} height={height}>
+        <svg ref={svgRef} width={width} height={height} preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${width} ${height}`}>
           {renderConnections()}
           {renderNeurons()}
           {showGradients && renderGradientFlows()}
