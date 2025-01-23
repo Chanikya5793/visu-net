@@ -18,7 +18,7 @@ export const LearningRateControl: React.FC<LearningRateControlProps> = ({
       value={learningRate}
       onChange={(_, value) => onChange(value as number)}
       min={0.001}
-      max={0.5}
+      max={0.9}
       step={0.001}
       disabled={disabled}
       valueLabelDisplay="auto"

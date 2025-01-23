@@ -16,6 +16,7 @@ export class WeatherTrainer implements ITrainer {
   private gradients: number[][][] = [];
   private learningRate: number = 0.01;
   private trainingData: any[];
+  private gradientNorm: number = 0;
 
   constructor(customDataset?: any[]) {
     this.trainingData = customDataset || weatherData.training;
@@ -100,49 +101,35 @@ export class WeatherTrainer implements ITrainer {
     const networkState = this.network.toJSON();
     
     networkState.layers.forEach((layer: any, layerIdx: number) => {
-      if (!layer.weights) return;
+      if (!layer.weights || !layer.weights[0]) return;
 
-      // Calculate layer-wise statistics
+      // Calculate layer-wise statistics with improved stability
       const allWeights = layer.weights.flat();
-      const globalMean = allWeights.reduce((sum: number, w: number) => sum + w, 0) / allWeights.length;
-      const globalStd = Math.sqrt(
-        allWeights.reduce((sum: number, w: number) => sum + Math.pow(w - globalMean, 2), 0) / allWeights.length
-      );
+      const mean = allWeights.reduce((sum: number, w: number) => sum + w, 0) / allWeights.length;
+      const variance = allWeights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / allWeights.length;
+      const std = Math.sqrt(variance + 1e-10);
+
+      // Adaptive scaling factor based on layer position
+      const layerScale = Math.sqrt(2.0 / (layer.weights.length + layer.weights[0].length));
+      const depthScale = 1.0 / Math.sqrt(networkState.layers.length - layerIdx);
 
       layer.weights.forEach((neuronWeights: number[], neuronIdx: number) => {
         // Calculate neuron-specific statistics
-        const mean = neuronWeights.reduce((sum: number, w: number) => sum + w, 0) / neuronWeights.length;
-        const variance = neuronWeights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / neuronWeights.length;
-        const localStd = Math.sqrt(variance);
+        const neuronMean = neuronWeights.reduce((sum: number, w: number) => sum + w, 0) / neuronWeights.length;
+        const neuronStd = Math.sqrt(
+          neuronWeights.reduce((sum: number, w: number) => sum + Math.pow(w - neuronMean, 2), 0) / neuronWeights.length + 1e-10
+        );
 
-        if (localStd > 0) {
-          // Normalize weights while preserving relative importance
-          const targetMean = globalMean * 0.1; // Reduce mean to prevent saturation
-          const targetStd = globalStd * (0.8 + 0.4 * Math.sin(neuronIdx * Math.PI / layer.weights.length));
-          
-          layer.weights[neuronIdx] = neuronWeights.map((w: number, idx: number) => {
-            const normalized = (w - mean) / localStd;
-            const scaled = normalized * targetStd + targetMean;
-            const position = idx / neuronWeights.length;
-            return scaled * (0.9 + 0.2 * Math.sin(position * Math.PI));
-          });
-        } else {
-          // Initialize with small random variations if all weights are the same
-          const baseValue = mean * 0.1;
-          layer.weights[neuronIdx] = neuronWeights.map((_: number, idx: number) => {
-            const position = idx / neuronWeights.length;
-            return baseValue + (Math.random() * 0.02 - 0.01) * Math.sin(position * Math.PI);
-          });
-        }
+        // Normalize weights with improved stability
+        layer.weights[neuronIdx] = neuronWeights.map((w: number) => {
+          const normalized = (w - neuronMean) / neuronStd;
+          return normalized * layerScale * depthScale;
+        });
       });
 
-      // Adjust biases to maintain activation distribution
+      // Initialize biases with small values scaled by layer depth
       if (layer.biases) {
-        const layerScale = 0.8 + 0.4 * Math.sin(layerIdx * Math.PI / networkState.layers.length);
-        layer.biases = layer.biases.map((_: number, idx: number) => {
-          const position = idx / layer.biases.length;
-          return 0.01 * layerScale * Math.sin(position * Math.PI);
-        });
+        layer.biases = layer.biases.map(() => 0.01 * depthScale);
       }
     });
 
@@ -152,7 +139,6 @@ export class WeatherTrainer implements ITrainer {
 
   async train(options: TrainingOptions): Promise<void> {
     try {
-      // Handle training state
       if (this.isPaused && this.trainingState) {
         this.network.fromJSON(this.trainingState);
         this.isPaused = false;
@@ -164,41 +150,43 @@ export class WeatherTrainer implements ITrainer {
       }
 
       this.isTraining = true;
+      const networkState = this.network.toJSON();
 
       await this.network.trainAsync(this.trainingData, {
-        iterations: this.totalEpochs, // Train for all epochs at once
-        errorThresh: 0.0000000000000000000000000000000000000000000001,
+        iterations: this.totalEpochs,
+        errorThresh: 0.001,
         log: true,
         logPeriod: 1,
+        learningRate: this.learningRate,
         callback: (stats: { iterations: number, error: number }) => {
-          // Update current epoch
           this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
 
-          // Check if we should stop
           if (!this.isTraining) {
+            this.isTraining = false;
             options.onStop?.();
             return true;
           }
 
-          // Check if we should pause
           if (this.isPaused) {
             this.trainingState = this.network.toJSON();
             options.onPause?.();
             return true;
           }
 
-          // Get current activations
+          // Prevent NaN propagation
+          if (isNaN(stats.error)) {
+            this.network.fromJSON(this.trainingState || networkState);
+            this.setLearningRate(this.learningRate * 0.5);
+            return false;
+          }
+
           this.updateActivations();
-
-          // Update network state in each iteration
           this.updateNetworkState();
-
-          // Update UI with current progress
           options.onIteration?.(this.currentEpoch, stats.error);
           
-          // Continue training unless we've reached total epochs
           if (this.currentEpoch >= this.totalEpochs) {
+            this.isTraining = false;
             options.onComplete?.();
             return true;
           }
@@ -208,6 +196,7 @@ export class WeatherTrainer implements ITrainer {
       });
 
     } catch (error: unknown) {
+      this.isTraining = false;
       if (error instanceof Error) {
         console.error('Training error:', error);
         options.onStop?.(error.message);
@@ -272,22 +261,23 @@ export class WeatherTrainer implements ITrainer {
 
   private updateActivations(): void {
     const networkState = this.network.toJSON();
-    this.activations = networkState.layers.map((layer: any) => {
+    this.activations = networkState.layers.map((layer: any, layerIndex: number) => {
       if (layer.biases) {
         return layer.biases.map((_: any, i: number) => {
           const weights = layer.weights[i] || [];
-          // Apply Xavier/Glorot scaling factor with safety check
-          const scalingFactor = 1.0 / Math.sqrt(Math.max(weights.length, 1));
+          const prevActivations = this.activations[this.activations.length - 1] || [];
           
-          // Calculate normalized weighted sum with proper scaling and NaN prevention
-          const weightedSum = weights.reduce((sum: number, w: number) => {
-            const scaled = Number.isFinite(w * scalingFactor) ? w * scalingFactor : 0;
-            return Number.isFinite(sum + scaled) ? sum + scaled : sum;
-          }, 0) + (Number.isFinite(layer.biases[i]) ? layer.biases[i] : 0);
+          // Improved weighted sum calculation
+          const weightedSum = weights.reduce((sum: number, w: number, idx: number) => {
+            const input = prevActivations[idx] || 0;
+            return sum + w * input;
+          }, 0) + layer.biases[i];
           
-          // Updated leaky ReLU with safety checks
-          return Number.isFinite(weightedSum) ? 
-            (weightedSum > 0 ? weightedSum : 0.02 * weightedSum) : 0;
+          // Use sigmoid for output layer, leaky ReLU for hidden layers
+          if (layerIndex === networkState.layers.length - 1) {
+            return 1 / (1 + Math.exp(-weightedSum)); // sigmoid
+          }
+          return weightedSum > 0 ? weightedSum : 0.01 * weightedSum; // leaky ReLU
         });
       }
       return [];
@@ -356,40 +346,45 @@ export class WeatherTrainer implements ITrainer {
   private calculateGradients(): void {
     const networkState = this.network.toJSON();
     this.gradients = [];
-    
-    // Calculate layer-wise gradient statistics with safety checks
+    let totalGradientSquared = 0;
+
     for (let layerIndex = 1; layerIndex < networkState.layers.length; layerIndex++) {
       const layer = networkState.layers[layerIndex];
       const prevLayer = networkState.layers[layerIndex - 1];
       const layerGradients: number[][] = [];
 
       if (layer.weights && prevLayer) {
-        const layerStats = this.calculateLayerStats(layer.weights);
+        const isOutputLayer = layerIndex === networkState.layers.length - 1;
+        const depthScale = 1.0 / Math.sqrt(networkState.layers.length - layerIndex);
         
         layer.weights.forEach((neuronWeights: number[], toNeuron: number) => {
           const neuronGradients: number[] = [];
-          const toActivation = this.activations[layerIndex][toNeuron];
+          const toActivation = this.activations[layerIndex]?.[toNeuron] || 0;
           
           neuronWeights.forEach((weight: number, fromNeuron: number) => {
-            const fromActivation = this.activations[layerIndex - 1][fromNeuron];
-            const activationGradient = toActivation > 0 ? 1 : 0.02;  // Enhanced leaky ReLU derivative
-            const scaledGradient = (fromActivation * activationGradient) / (layerStats.stdDev + 1e-6);
-            neuronGradients.push(scaledGradient);
+            const fromActivation = this.activations[layerIndex - 1]?.[fromNeuron] || 0;
+            
+            // Different gradient calculation for output layer
+            let activationGradient;
+            if (isOutputLayer) {
+              activationGradient = toActivation * (1 - toActivation); // sigmoid derivative
+            } else {
+              activationGradient = toActivation > 0 ? 1 : 0.01; // leaky ReLU derivative
+            }
+            
+            const weightGradient = fromActivation * activationGradient * depthScale;
+            const clippedGradient = Math.max(Math.min(weightGradient, 1.0), -1.0);
+            neuronGradients.push(clippedGradient);
+            totalGradientSquared += clippedGradient * clippedGradient;
           });
           
           layerGradients.push(neuronGradients);
         });
       }
-      
       this.gradients.push(layerGradients);
     }
-  }
 
-  private calculateLayerStats(weights: number[][]): { mean: number; stdDev: number } {
-    const flatWeights = weights.flat();
-    const mean = flatWeights.reduce((sum, w) => sum + w, 0) / flatWeights.length;
-    const variance = flatWeights.reduce((sum, w) => sum + (w - mean) ** 2, 0) / flatWeights.length;
-    return { mean, stdDev: Math.sqrt(variance || 1) };
+    this.gradientNorm = Math.sqrt(totalGradientSquared + 1e-10);
   }
 
   getWeights(): number[][][] {
@@ -421,11 +416,11 @@ export class WeatherTrainer implements ITrainer {
   }
 
   setLearningRate(rate: number): void {
-    this.learningRate = rate;
+    this.learningRate = Math.min(Math.max(rate, 0.001), 1.0); // Clamp between 0.001 and 1.0
     const networkState = this.network.toJSON();
     networkState.trainOpts = {
       ...networkState.trainOpts,
-      learningRate: rate
+      learningRate: this.learningRate
     };
     this.network.fromJSON(networkState);
   }

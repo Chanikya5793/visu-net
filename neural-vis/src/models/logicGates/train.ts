@@ -16,6 +16,7 @@ export class LogicGateTrainer implements ITrainer {
   private gradients: number[][][] = [];
   private learningRate: number = 0.01;
   private trainingData: any[];
+  private gradientNorm: number = 0;
 
   constructor(customDataset?: any[]) {
     this.trainingData = customDataset || logicGateData.training;
@@ -88,34 +89,36 @@ export class LogicGateTrainer implements ITrainer {
   normalizeWeights(): void {
     const networkState = this.network.toJSON();
     
-    networkState.layers.forEach((layer: any) => {
-      if (layer.weights) {
-        // Calculate layer statistics
-        let meanSum = 0;
-        let stdSum = 0;
-        let count = 0;
-        
-        // First pass: calculate mean
-        layer.weights.forEach((neuronWeights: number[]) => {
-          neuronWeights.forEach(w => {
-            meanSum += w;
-            count++;
-          });
-        });
-        const mean = meanSum / count;
-        
-        // Second pass: calculate standard deviation
-        layer.weights.forEach((neuronWeights: number[]) => {
-          neuronWeights.forEach(w => {
-            stdSum += (w - mean) ** 2;
-          });
-        });
-        const std = Math.sqrt(stdSum / count);
-        
-        // Normalize weights while preserving distribution
-        layer.weights = layer.weights.map((neuronWeights: number[]) =>
-          neuronWeights.map(w => (w - mean) / (std + 1e-8))
+    networkState.layers.forEach((layer: any, layerIdx: number) => {
+      if (!layer.weights || !layer.weights[0]) return;
+
+      // Calculate layer-wise statistics with improved stability
+      const allWeights = layer.weights.flat();
+      const mean = allWeights.reduce((sum: number, w: number) => sum + w, 0) / allWeights.length;
+      const variance = allWeights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / allWeights.length;
+      const std = Math.sqrt(variance + 1e-10);
+
+      // Adaptive scaling factor based on layer position
+      const layerScale = Math.sqrt(2.0 / (layer.weights.length + layer.weights[0].length));
+      const depthScale = 1.0 / Math.sqrt(networkState.layers.length - layerIdx);
+
+      layer.weights.forEach((neuronWeights: number[], neuronIdx: number) => {
+        // Calculate neuron-specific statistics
+        const neuronMean = neuronWeights.reduce((sum: number, w: number) => sum + w, 0) / neuronWeights.length;
+        const neuronStd = Math.sqrt(
+          neuronWeights.reduce((sum: number, w: number) => sum + Math.pow(w - neuronMean, 2), 0) / neuronWeights.length + 1e-10
         );
+
+        // Normalize weights with improved stability
+        layer.weights[neuronIdx] = neuronWeights.map((w: number) => {
+          const normalized = (w - neuronMean) / neuronStd;
+          return normalized * layerScale * depthScale;
+        });
+      });
+
+      // Initialize biases with small values scaled by layer depth
+      if (layer.biases) {
+        layer.biases = layer.biases.map(() => 0.01 * depthScale);
       }
     });
 
@@ -125,7 +128,6 @@ export class LogicGateTrainer implements ITrainer {
 
   async train(options: TrainingOptions): Promise<void> {
     try {
-      // Handle training state
       if (this.isPaused && this.trainingState) {
         this.network.fromJSON(this.trainingState);
         this.isPaused = false;
@@ -137,41 +139,43 @@ export class LogicGateTrainer implements ITrainer {
       }
 
       this.isTraining = true;
+      const networkState = this.network.toJSON();
 
       await this.network.trainAsync(this.trainingData, {
-        iterations: this.totalEpochs, // Train for all epochs at once
-        errorThresh: 0.0000000000000000000000000000000000000000000001,
+        iterations: this.totalEpochs,
+        errorThresh: 0.001,
         log: true,
         logPeriod: 1,
+        learningRate: this.learningRate,
         callback: (stats: { iterations: number, error: number }) => {
-          // Update current epoch
           this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
 
-          // Check if we should stop
           if (!this.isTraining) {
+            this.isTraining = false;
             options.onStop?.();
             return true;
           }
 
-          // Check if we should pause
           if (this.isPaused) {
             this.trainingState = this.network.toJSON();
             options.onPause?.();
             return true;
           }
 
-          // Get current activations
+          // Prevent NaN propagation
+          if (isNaN(stats.error)) {
+            this.network.fromJSON(this.trainingState || networkState);
+            this.setLearningRate(this.learningRate * 0.5);
+            return false;
+          }
+
           this.updateActivations();
-
-          // Update network state in each iteration
           this.updateNetworkState();
-
-          // Update UI with current progress
           options.onIteration?.(this.currentEpoch, stats.error);
           
-          // Continue training unless we've reached total epochs
           if (this.currentEpoch >= this.totalEpochs) {
+            this.isTraining = false;
             options.onComplete?.();
             return true;
           }
@@ -181,6 +185,7 @@ export class LogicGateTrainer implements ITrainer {
       });
 
     } catch (error: unknown) {
+      this.isTraining = false;
       if (error instanceof Error) {
         console.error('Training error:', error);
         options.onStop?.(error.message);
@@ -254,33 +259,23 @@ export class LogicGateTrainer implements ITrainer {
 
   private updateActivations(): void {
     const networkState = this.network.toJSON();
-    
-    // Calculate layer statistics with numerical stability checks
-    const layerStats = networkState.layers.map((layer: any) => {
-      if (!layer.weights) return null;
-      const weights = layer.weights.flat().filter((w: number) => Number.isFinite(w));
-      if (weights.length === 0) return { mean: 0, stdDev: 1 };
-      
-      const mean = weights.reduce((sum: number, w: number) => sum + w, 0) / weights.length;
-      const variance = weights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / weights.length;
-      const stdDev = Math.sqrt(Math.max(variance, 1e-7));
-      return { mean, stdDev };
-    });
-
     this.activations = networkState.layers.map((layer: any, layerIndex: number) => {
       if (layer.biases) {
-        const stats = layerStats[layerIndex] || { mean: 0, stdDev: 1 };
-        const scaleFactor = 1.0 / Math.max(stats.stdDev, 1e-7);
-        
         return layer.biases.map((_: any, i: number) => {
           const weights = layer.weights[i] || [];
-          const weightedSum = weights.reduce((sum: number, w: number) => {
-            return Number.isFinite(w) ? sum + w * scaleFactor : sum;
-          }, 0) + (Number.isFinite(layer.biases[i]) ? layer.biases[i] : 0);
+          const prevActivations = this.activations[this.activations.length - 1] || [];
           
-          // Safe leaky ReLU with bounds checking
-          const slope = weightedSum > 0 ? 1 : 0.02;
-          return Number.isFinite(weightedSum) ? slope * weightedSum : 0;
+          // Improved weighted sum calculation
+          const weightedSum = weights.reduce((sum: number, w: number, idx: number) => {
+            const input = prevActivations[idx] || 0;
+            return sum + w * input;
+          }, 0) + layer.biases[i];
+          
+          // Use sigmoid for output layer, leaky ReLU for hidden layers
+          if (layerIndex === networkState.layers.length - 1) {
+            return 1 / (1 + Math.exp(-weightedSum)); // sigmoid
+          }
+          return weightedSum > 0 ? weightedSum : 0.01 * weightedSum; // leaky ReLU
         });
       }
       return [];
@@ -319,48 +314,51 @@ export class LogicGateTrainer implements ITrainer {
     this.weights = networkState.layers.map((layer: any) => layer.weights || []);
     this.biases = networkState.layers.map((layer: any) => layer.biases || []);
     
-    this.calculateGradients(layerStats);
+    this.calculateGradients();
   }
 
-  private calculateGradients(layerStats: Array<{ mean: number; stdDev: number } | null>): void {
+  private calculateGradients(): void {
     const networkState = this.network.toJSON();
     this.gradients = [];
     let totalGradientSquared = 0;
 
-    // Calculate scaled gradients using layer statistics
     for (let layerIndex = 1; layerIndex < networkState.layers.length; layerIndex++) {
       const layer = networkState.layers[layerIndex];
       const prevLayer = networkState.layers[layerIndex - 1];
-      const stats = layerStats[layerIndex];
-      const scaleFactor = stats ? 1.0 / (stats.stdDev || 1.0) : 1.0;
-
       const layerGradients: number[][] = [];
 
       if (layer.weights && prevLayer) {
-        // For each neuron in current layer
+        const isOutputLayer = layerIndex === networkState.layers.length - 1;
+        const depthScale = 1.0 / Math.sqrt(networkState.layers.length - layerIndex);
+        
         layer.weights.forEach((neuronWeights: number[], toNeuron: number) => {
           const neuronGradients: number[] = [];
-          const toActivation = this.activations[layerIndex][toNeuron];
+          const toActivation = this.activations[layerIndex]?.[toNeuron] || 0;
           
-          // For each connection from previous layer
           neuronWeights.forEach((weight: number, fromNeuron: number) => {
-            const fromActivation = this.activations[layerIndex - 1][fromNeuron];
+            const fromActivation = this.activations[layerIndex - 1]?.[fromNeuron] || 0;
             
-            // Calculate gradient components
-            const activationGradient = toActivation > 0 ? 1 : 0.01;  // Derivative of leaky ReLU
-            const weightGradient = fromActivation * activationGradient;
+            // Different gradient calculation for output layer
+            let activationGradient;
+            if (isOutputLayer) {
+              activationGradient = toActivation * (1 - toActivation); // sigmoid derivative
+            } else {
+              activationGradient = toActivation > 0 ? 1 : 0.01; // leaky ReLU derivative
+            }
             
-            // Store gradient
-            neuronGradients.push(weightGradient);
-            totalGradientSquared += weightGradient * weightGradient;
+            const weightGradient = fromActivation * activationGradient * depthScale;
+            const clippedGradient = Math.max(Math.min(weightGradient, 1.0), -1.0);
+            neuronGradients.push(clippedGradient);
+            totalGradientSquared += clippedGradient * clippedGradient;
           });
           
           layerGradients.push(neuronGradients);
         });
       }
-      
       this.gradients.push(layerGradients);
     }
+
+    this.gradientNorm = Math.sqrt(totalGradientSquared + 1e-10);
   }
 
   getWeights(): number[][][] {
@@ -392,11 +390,11 @@ export class LogicGateTrainer implements ITrainer {
   }
 
   setLearningRate(rate: number): void {
-    this.learningRate = rate;
+    this.learningRate = Math.min(Math.max(rate, 0.001), 1.0); // Clamp between 0.001 and 1.0
     const networkState = this.network.toJSON();
     networkState.trainOpts = {
       ...networkState.trainOpts,
-      learningRate: rate
+      learningRate: this.learningRate
     };
     this.network.fromJSON(networkState);
   }
