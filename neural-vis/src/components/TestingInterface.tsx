@@ -40,7 +40,7 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
       
       case 'weatherPrediction':
         // Single output representing probability
-        return `${(pred[0] * 100).toFixed(1)}% chance of rain`;
+        return `${(pred[0] ).toFixed(1)}% chance of rain`;
         
       default:
         return JSON.stringify(pred);
@@ -221,11 +221,10 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             {dataset === 'fitnessClassification' && (
               <>
                 <Typography>
-                  Fitness Level: {prediction[0] >= 0.66 ? 'Fit' : 
-                                prediction[0] >= 0.33 ? 'Average' : 'Unfit'}
+                  Fitness Level: {interpretPrediction(prediction)}
                 </Typography>
                 <Typography>
-                  Confidence: {(prediction[0] * 100).toFixed(2)}%
+                  Confidence: {(prediction[prediction.indexOf(Math.max(...prediction))] * 100).toFixed(2)}%
                 </Typography>
               </>
             )}

@@ -2,6 +2,12 @@ import * as brain from 'brain.js';
 import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
 import { logicGateData } from './data';
 
+interface LayerStats {
+  mean: number;
+  std: number;  // Changed from stdDev to std
+  size: number;
+}
+
 export class LogicGateTrainer implements ITrainer {
   protected network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
@@ -31,61 +37,7 @@ export class LogicGateTrainer implements ITrainer {
     this.normalizeWeights();  // Initialize weights properly
   }
 
-  getNetwork(): brain.NeuralNetwork {
-    return this.network;
-  }
-
-  initNetwork(layers?: number[]): void {
-    const inputSize = this.trainingData[0].input.length;
-    const outputSize = this.trainingData[0].output.length;
-    const layerSize = layers?.[0] || 3;
-    
-    this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [3],
-      activation: 'leaky-relu',
-      learningRate: this.learningRate
-    });
-
-    // Initialize the network with a single pass
-    const dummyData = {
-      input: Array(inputSize).fill(0),
-      output: Array(outputSize).fill(0)
-    };
-    this.network.train([dummyData], {
-      iterations: 1,
-      errorThresh: 0.01,
-      log: false
-    });
-
-    // Apply Xavier/Glorot initialization
-    const networkState = this.network.toJSON();
-    networkState.layers.forEach((layer: any, idx: number) => {
-      if (!layer.weights) return;
-
-      // Calculate fan in/out safely
-      const fanIn = idx === 0 ? inputSize : 
-        (networkState.layers[idx - 1]?.weights?.[0]?.length || inputSize);
-      const fanOut = layer.weights[0]?.length || outputSize;
-      const scale = Math.sqrt(2.0 / (fanIn + fanOut));  // Xavier/Glorot initialization
-
-      // Initialize weights with proper scaling
-      layer.weights = layer.weights.map((neuronWeights: number[]) => 
-        neuronWeights.map(() => 
-          (Math.random() * 2 - 1) * scale
-        )
-      );
-
-      // Initialize biases to small positive values
-      if (layer.biases) {
-        layer.biases = layer.biases.map(() => 0.01);
-      }
-    });
-
-    this.network.fromJSON(networkState);
-    this.updateNetworkState();
-  }
-
-  // Add weight normalization method
+  // Weight normalization method with improved stability
   normalizeWeights(): void {
     const networkState = this.network.toJSON();
     
@@ -125,6 +77,62 @@ export class LogicGateTrainer implements ITrainer {
     this.network.fromJSON(networkState);
     this.updateNetworkState();
   }
+
+  getNetwork(): brain.NeuralNetwork {
+    return this.network;
+  }
+
+  initNetwork(layers?: number[]): void {
+    const inputSize = this.trainingData[0].input.length;
+    const outputSize = this.trainingData[0].output.length;
+    const layerSize = layers?.[0] || 3;
+    
+    this.network = new brain.NeuralNetwork({
+      hiddenLayers: layers || [3],
+      activation: 'sigmoid',  // Changed to sigmoid for better initial gradient flow
+      learningRate: this.learningRate
+    });
+
+    // Initialize with random values for better weight distribution
+    const dummyData = {
+      input: Array(inputSize).fill(0).map(() => Math.random()),
+      output: Array(outputSize).fill(0).map(() => Math.random())
+    };
+    this.network.train([dummyData], {
+      iterations: 1,
+      errorThresh: 0.01,
+      log: false
+    });
+
+    // Apply Xavier/Glorot initialization
+    let networkState = this.network.toJSON();
+    networkState.layers.forEach((layer: any, idx: number) => {
+      if (!layer.weights) return;
+
+      // Calculate fan in/out safely
+      const fanIn = idx === 0 ? inputSize : 
+        (networkState.layers[idx - 1]?.weights?.[0]?.length || inputSize);
+      const fanOut = layer.weights[0]?.length || outputSize;
+      const scale = Math.sqrt(2.0 / (fanIn + fanOut));  // Xavier/Glorot initialization
+
+      // Initialize weights with proper scaling
+      layer.weights = layer.weights.map((neuronWeights: number[]) => 
+        neuronWeights.map(() => 
+          (Math.random() * 2 - 1) * scale
+        )
+      );
+
+      // Initialize biases to small positive values
+      if (layer.biases) {
+        layer.biases = layer.biases.map(() => 0.01);
+      }
+    });
+
+    this.network.fromJSON(networkState);
+    this.updateNetworkState();
+  }
+
+
 
   async train(options: TrainingOptions): Promise<void> {
     try {
@@ -284,8 +292,6 @@ export class LogicGateTrainer implements ITrainer {
 
   private updateNetworkState(): void {
     const networkState = this.network.toJSON();
-    
-    // Calculate layer-wise statistics with safety checks
     const layerStats = this.calculateLayerStatistics(networkState);
     
     this.activations = [
@@ -294,8 +300,8 @@ export class LogicGateTrainer implements ITrainer {
       ),
       ...networkState.layers.map((layer: any, layerIndex: number) => {
         if (layer.biases) {
-          const stats = layerStats[layerIndex] || { mean: 0, stdDev: 1 };
-          const scaleFactor = 1.0 / Math.max(stats.stdDev, 1e-7);
+          const stats = layerStats[layerIndex] || { mean: 0, std: 1 };  // Changed stdDev to std
+          const scaleFactor = 1.0 / Math.max(stats.std, 1e-7);  // Changed stdDev to std
           
           return layer.biases.map((_: any, i: number) => {
             const weights = layer.weights[i] || [];
@@ -451,13 +457,30 @@ export class LogicGateTrainer implements ITrainer {
     }
   }
 
-  private calculateLayerStatistics(networkState: any): Array<{ mean: number; stdDev: number } | null> {
+  private calculateLayerStatistics(networkState: any): LayerStats[] {
     return networkState.layers.map((layer: any) => {
-      if (!layer.weights) return null;
-      const weights = layer.weights.flat();
+      if (!layer.weights || !layer.weights.length) return {
+        mean: 0,
+        std: 1,
+        size: 0
+      };
+      
+      const weights: number[] = layer.weights.flat().filter((w: number) => isFinite(w));
+      if (!weights.length) return {
+        mean: 0,
+        std: 1,
+        size: 0
+      };
+
       const mean = weights.reduce((sum: number, w: number) => sum + w, 0) / weights.length;
-      const variance = weights.reduce((sum: number, w: number) => sum + (w - mean) ** 2, 0) / weights.length;
-      return { mean, stdDev: Math.sqrt(variance) };
+      const variance = weights.reduce((sum: number, w: number) => 
+        sum + Math.pow(w - mean, 2), 0) / weights.length;
+
+      return {
+        mean: isFinite(mean) ? mean : 0,
+        std: Math.sqrt(isFinite(variance) ? variance + 1e-10 : 1),
+        size: layer.weights[0]?.length || 0
+      };
     });
   }
 }

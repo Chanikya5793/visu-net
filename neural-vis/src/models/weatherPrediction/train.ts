@@ -2,6 +2,13 @@ import * as brain from 'brain.js';
 import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
 import { weatherData } from './data';
 
+// Add at the top of the file after imports
+interface LayerStats {
+  mean: number;
+  std: number;
+  size: number;
+}
+
 export class WeatherTrainer implements ITrainer {
   protected network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
@@ -31,6 +38,33 @@ export class WeatherTrainer implements ITrainer {
     this.normalizeWeights();  // Initialize weights properly
   }
 
+  private calculateLayerStatistics(networkState: any): LayerStats[] {
+    return networkState.layers.map((layer: any) => {
+      if (!layer.weights || !layer.weights.length) return {
+        mean: 0,
+        std: 1,
+        size: 0
+      };
+      
+      const weights: number[] = layer.weights.flat().filter((w: number) => Number.isFinite(w));
+      if (!weights.length) return {
+        mean: 0,
+        std: 1,
+        size: 0
+      };
+
+      const mean = weights.reduce((sum: number, w: number) => sum + w, 0) / weights.length;
+      const variance = weights.reduce((sum: number, w: number) => 
+        sum + Math.pow(w - mean, 2), 0) / weights.length;
+
+      return {
+        mean: Number.isFinite(mean) ? mean : 0,
+        std: Math.sqrt(Number.isFinite(variance) ? variance + 1e-10 : 1),
+        size: layer.weights[0]?.length || 0
+      };
+    });
+  }
+  
   getNetwork(): brain.NeuralNetwork {
     return this.network;
   }
@@ -240,7 +274,11 @@ export class WeatherTrainer implements ITrainer {
   }
 
   predict(input: number[]): number[] {
-    return this.network.run(input);
+    const output = this.network.run(input);
+    // First normalize the output to be between 0 and 1
+    const normalizedOutput = output.map(value => Math.min(Math.max(value, 0), 1));
+    // Then scale to percentage (0-100)
+    return normalizedOutput.map(value => value * 100);
   }
 
   getProgress(): {
@@ -286,39 +324,20 @@ export class WeatherTrainer implements ITrainer {
 
   private updateNetworkState(): void {
     const networkState = this.network.toJSON();
+    const layerStats = this.calculateLayerStatistics(networkState);
     
-    // Calculate layer-wise statistics with safety checks
-    const layerStats = networkState.layers.map((layer: any) => {
-      const weights = layer.weights || [];
-      const flatWeights = weights.flat().filter((w: number) => Number.isFinite(w));
-      const count = Math.max(flatWeights.length, 1);
-      const mean = flatWeights.reduce((sum: number, w: number) => 
-        Number.isFinite(sum + w) ? sum + w : sum, 0) / count;
-      const variance = flatWeights.reduce((sum: number, w: number) => {
-        const diff = Number.isFinite(w - mean) ? (w - mean) ** 2 : 0;
-        return Number.isFinite(sum + diff) ? sum + diff : sum;
-      }, 0) / count;
-      return { 
-        mean: Number.isFinite(mean) ? mean : 0, 
-        stdDev: Math.sqrt(Number.isFinite(variance) ? variance : 1) 
-      };
-    });
-
-    // Initialize activations with improved scaling and safety checks
     this.activations = [
-      // Input layer with protected scaling
       (networkState.layers[0].weights[0] || []).map((w: number) => {
-        const stdDev = layerStats[0].stdDev + 1e-6;
-        return Number.isFinite(w / stdDev) ? w / stdDev : 0;
+        const stats = layerStats[0];
+        return Number.isFinite(w) ? w / (stats.std + 1e-6) : 0;
       }),
-      // Hidden and output layers with protected calculations
       ...networkState.layers.map((layer: any, idx: number) => {
         if (layer.biases) {
+          const stats = layerStats[idx];
           return layer.biases.map((_: any, i: number) => {
             const weights = layer.weights[i] || [];
-            const stdDev = layerStats[idx].stdDev + 1e-6;
             const scaledSum = weights.reduce((sum: number, w: number) => {
-              const scaled = Number.isFinite(w / stdDev) ? w / stdDev : 0;
+              const scaled = Number.isFinite(w) ? w / (stats.std + 1e-6) : 0;
               return Number.isFinite(sum + scaled) ? sum + scaled : sum;
             }, 0);
             const weightedSum = Number.isFinite(scaledSum + layer.biases[i]) ? 
@@ -329,16 +348,19 @@ export class WeatherTrainer implements ITrainer {
         return [];
       })
     ];
-
-    // Store normalized weights and biases with safety checks
+  
     this.weights = networkState.layers.map((layer: any, idx: number) => 
       (layer.weights || []).map((row: number[]) => 
         row.map((w: number) => {
-          const stdDev = layerStats[idx].stdDev + 1e-6;
-          return Number.isFinite(w / stdDev) ? w / stdDev : 0;
-        })));
+          const stats = layerStats[idx];
+          return Number.isFinite(w) ? w / (stats.std + 1e-6) : 0;
+        })
+      )
+    );
+  
     this.biases = networkState.layers.map((layer: any) => 
-      (layer.biases || []).map((b: number) => Number.isFinite(b) ? b : 0));
+      (layer.biases || []).map((b: number) => Number.isFinite(b) ? b : 0)
+    );
     
     this.calculateGradients();
   }

@@ -276,7 +276,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
         return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
           Array.from({ length: neuronsCount }).map((_, toIdx) => {
-            const weight = weights?.[layerIndex - 1]?.[fromIdx]?.[toIdx] || 0;
+            // Fix: Correct weight indexing
+            const weight = weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
             const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
             const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
             

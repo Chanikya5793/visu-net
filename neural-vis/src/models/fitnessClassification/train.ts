@@ -2,6 +2,12 @@ import * as brain from 'brain.js';
 import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
 import { fitnessData } from './data';
 
+// Add at the top of the file after imports
+interface LayerStats {
+  mean: number;
+  std: number;
+  size: number;
+}
 export class FitnessTrainer implements ITrainer {
   protected network!: brain.NeuralNetwork;
   private isTraining: boolean = false;
@@ -241,8 +247,10 @@ export class FitnessTrainer implements ITrainer {
   }
 
   predict(input: number[]): number[] {
-    // Return raw output array (3 neurons)
-    return this.network.run(input);
+    const output = this.network.run(input);
+    // Normalize outputs to ensure they sum to 1 for proper probability distribution
+    const sum = output.reduce((a, b) => a + b, 0);
+    return output.map(value => value / (sum || 1));
   }
 
   getProgress(): {
@@ -308,18 +316,18 @@ export class FitnessTrainer implements ITrainer {
 
       // Calculate mean with numerical stability
       const mean = weights.reduce((sum: number, w: number) => {
-        return sum + (isFinite(w) ? w : 0);
+        return sum + (Number.isFinite(w) ? w : 0);
       }, 0) / weights.length;
 
       // Calculate variance with numerical stability
       const variance = weights.reduce((sum: number, w: number) => {
-        const diff = isFinite(w) ? w - mean : 0;
+        const diff = Number.isFinite(w) ? w - mean : 0;
         return sum + diff * diff;
       }, 0) / weights.length;
 
       return {
-        mean: isFinite(mean) ? mean : 0,
-        std: Math.sqrt(isFinite(variance) ? variance + 1e-10 : 1),
+        mean: Number.isFinite(mean) ? mean : 0,
+        std: Math.sqrt(Number.isFinite(variance) ? variance + 1e-10 : 1),
         size: layer.weights[0]?.length || 0
       };
     });

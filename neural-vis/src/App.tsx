@@ -45,6 +45,7 @@ function App() {
   const [networkActivations, setNetworkActivations] = useState<number[][]>([]);
   const [networkWeights, setNetworkWeights] = useState<number[][][]>([]);
   const [networkBiases, setNetworkBiases] = useState<number[][]>([]);
+  const [networkGradients, setNetworkGradients] = useState<number[][][]>([]);
   const [learningRate, setLearningRate] = useState(0.01);
   const [trainingSpeed, setTrainingSpeed] = useState(1);
   const [customDataset, setCustomDataset] = useState<any[]>([]);
@@ -241,6 +242,8 @@ function App() {
       // Update visualizations
       setNetworkWeights(trainerRef.current.getWeights());
       setNetworkActivations(trainerRef.current.getActivations());
+      setNetworkBiases(trainerRef.current.getBiases());
+      setNetworkGradients(trainerRef.current.getGradients());
     }
   };
 
