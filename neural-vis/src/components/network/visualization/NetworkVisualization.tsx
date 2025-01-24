@@ -545,24 +545,31 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {/* Network Visualization Section */}
       <Box sx={{ 
-        width: '100%', 
-        maxWidth: '100vw',
+        width: '100%',                    // Take full width of parent
+        maxWidth: '100%',                 // Prevent overflow beyond parent width
         display: 'flex', 
         justifyContent: 'center',
-        overflow: 'auto',
-        padding: { xs: 2, sm: 3 },
+        overflow: 'hidden',               // Hide overflow instead of allowing scroll
+        padding: { xs: 2, sm: 3 },        // Responsive padding (16px mobile, 24px desktop)
         backgroundColor: 'background.paper',
         borderRadius: 1,
         boxShadow: 1,
         '& svg': {
-          maxWidth: '100%',
-          height: 'auto',
-          minHeight: { xs: 400, sm: 500, md: 600 },
-          transform: 'scale(0.9)',
+          width: '100%',                  // Take full width of container
+          maxWidth: '100%',               // Ensure SVG doesn't overflow
+          height: 'auto',                 // Maintain aspect ratio
+          minHeight: { xs: 400, sm: 500, md: 600 }, // Responsive min heights
+          transform: 'scale(0.9)',        // Slight scale down for padding
           transformOrigin: 'center center'
         }
       }}>
-        <svg ref={svgRef} width={width} height={height} preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${width} ${height}`}>
+        <svg 
+          ref={svgRef} 
+          width={width} 
+          height={height} 
+          preserveAspectRatio="xMidYMid meet" 
+          viewBox={`0 0 ${width} ${height}`}
+        >
           {renderConnections()}
           {renderNeurons()}
           {showGradients && renderGradientFlows()}

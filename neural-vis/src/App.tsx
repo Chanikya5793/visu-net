@@ -225,9 +225,9 @@ function App() {
   const getNetworkArchitecture = (selectedDataset: string): number[] => {
     switch(selectedDataset) {
       case 'logicGates':
-        return [7, 3, 2]; // Input(2 + 5 for gate type), Hidden(3), Output(1)
+        return [10, 3, 2]; // Input(3 + 7 for gate type), Hidden(3), Output(2)
       case 'fitnessClassification':
-        return [3, 4, 4, 3]; // Input(3), Hidden(4,4), Output(1)
+        return [3, 4, 4, 3]; // Input(3), Hidden(4,4), Output(3)
       case 'weatherPrediction':
         return [3, 6, 4, 1]; // Input(3), Hidden(6,4), Output(1)
       default:
