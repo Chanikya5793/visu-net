@@ -1,17 +1,20 @@
 #!/bin/bash
 
-# Install required system dependencies
-sudo apt-get update
-sudo apt-get install -y \
-    libx11-dev \
-    libxi-dev \
-    libxext-dev \
-    mesa-common-dev \
-    build-essential
+# Check if Homebrew is installed
+if ! command -v brew &> /dev/null; then
+    echo "Homebrew is not installed. Please install Homebrew first."
+    echo "Visit https://brew.sh for installation instructions."
+    exit 1
+fi
 
-# Run npm install
-npm install
+# Install required system dependencies for macOS
+brew install xquartz
 
-# Make the script executable and run it with sudo permissions
-#chmod +x setup.sh
-#sudo ./setup.sh
+# Install X11 development files
+brew install libx11
+
+# Run npm install with legacy OpenSSL provider
+NODE_OPTIONS='--openssl-legacy-provider' npm install
+
+# Make the script executable
+chmod +x setup.sh
