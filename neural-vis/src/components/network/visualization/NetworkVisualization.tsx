@@ -109,9 +109,12 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   // =============================================
   
   const getNeuronPosition = (layerIndex: number, neuronIndex: number) => {
+    const layerSize = layers[layerIndex];
+    const totalHeight = (layerSize - 1) * verticalSpacing;
+    const startY = (height - totalHeight) / 2;
     return {
       x: paddingLeft + layerIndex * layerSpacing,
-      y: paddingTop + (neuronIndex + 1) * verticalSpacing
+      y: startY + neuronIndex * verticalSpacing
     };
   };
 
@@ -210,10 +213,10 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     weight: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Simplified connection strength calculation
-    return isInputLayer ? 
-      Math.abs(weight) : // For input layer, use weight directly
-      Math.abs(weight * fromActivation); // For other layers, use weight * activation
+    // Enhanced connection strength calculation
+    const baseStrength = Math.abs(weight);
+    const activationFactor = isInputLayer ? 1 : Math.abs(fromActivation);
+    return baseStrength * (0.3 + 0.7 * activationFactor); // Ensure minimum visibility
   };
 
   const getConnectionOpacity = (
@@ -341,48 +344,76 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 >
                   {isInputLayer && (
                     <>
+                      <defs>
+                        <filter id={`glow-${layerIndex}-${fromIdx}-${toIdx}`}>
+                          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      {/* Base connection with glow effect */}
                       <animate
                         attributeName="opacity"
-                        values={`${connectionOpacity};${connectionOpacity * 0.7};${connectionOpacity}`}
-                        dur="0.6s"
-                        repeatCount="indefinite"
-                        begin={`${(fromIdx + toIdx) * 0.1}s`}
-                      />
-                      <animate
-                        attributeName="d"
-                        values={`
-                          M ${fromPos.x} ${fromPos.y} 
-                          C ${controlPoint1X} ${controlPoint1Y - 5},
-                            ${controlPoint2X} ${controlPoint2Y - 5},
-                            ${toPos.x} ${toPos.y};
-                          M ${fromPos.x} ${fromPos.y} 
-                          C ${controlPoint1X} ${controlPoint1Y},
-                            ${controlPoint2X} ${controlPoint2Y},
-                            ${toPos.x} ${toPos.y};
-                          M ${fromPos.x} ${fromPos.y} 
-                          C ${controlPoint1X} ${controlPoint1Y + 5},
-                            ${controlPoint2X} ${controlPoint2Y + 5},
-                            ${toPos.x} ${toPos.y};
-                          M ${fromPos.x} ${fromPos.y} 
-                          C ${controlPoint1X} ${controlPoint1Y},
-                            ${controlPoint2X} ${controlPoint2Y},
-                            ${toPos.x} ${toPos.y}
-                        `}
+                        values={`${connectionOpacity};${connectionOpacity * 0.6};${connectionOpacity}`}
                         dur="2s"
                         repeatCount="indefinite"
-                        begin={`${(fromIdx + toIdx) * 0.1}s`}
+                        begin={`${(fromIdx + toIdx) * 0.2}s`}
+                      />
+                      {/* Flowing particles */}
+                      <circle r="3" fill={connectionColor}>
+                        <animateMotion
+                          dur="1.5s"
+                          repeatCount="indefinite"
+                          begin={`${(fromIdx + toIdx) * 0.2}s`}
+                          path={path}
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.8;0.4;0.8"
+                          dur="1.5s"
+                          repeatCount="indefinite"
+                          begin={`${(fromIdx + toIdx) * 0.2}s`}
+                        />
+                      </circle>
+                      {/* Secondary particle for enhanced flow effect */}
+                      <circle r="2" fill={connectionColor}>
+                        <animateMotion
+                          dur="1.5s"
+                          repeatCount="indefinite"
+                          begin={`${(fromIdx + toIdx) * 0.2 + 0.75}s`}
+                          path={path}
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.6;0.3;0.6"
+                          dur="1.5s"
+                          repeatCount="indefinite"
+                          begin={`${(fromIdx + toIdx) * 0.2 + 0.75}s`}
+                        />
+                      </circle>
+                      {/* Dynamic glow effect */}
+                      <animate
+                        attributeName="filter"
+                        values={`url(#glow-${layerIndex}-${fromIdx}-${toIdx});none`}
+                        dur="2s"
+                        repeatCount="indefinite"
+                        begin={`${(fromIdx + toIdx) * 0.2}s`}
                       />
                     </>
                   )}
                 </path>
-                <ConnectionLabel
-                  weight={Number(weight.toFixed(2))}
-                  fromActivation={Number(fromActivation.toFixed(2))}
-                  toActivation={Number(toActivation.toFixed(2))}
-                  x={labelX}
-                  y={labelY}
-                  isInputLayer={isInputLayer}
-                />
+                {!isInputLayer && (
+                  <ConnectionLabel
+                    weight={Number(weight.toFixed(2))}
+                    fromActivation={Number(fromActivation.toFixed(2))}
+                    toActivation={Number(toActivation.toFixed(2))}
+                    x={labelX}
+                    y={labelY}
+                    isInputLayer={isInputLayer}
+                  />
+                )}
               </g>
             );
           })
@@ -515,8 +546,9 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 textAnchor="middle"
                 fill={theme.palette.text.primary}
                 fontWeight="bold"
+                opacity={Math.abs(bias) < 0.001 ? 0.5 : 1}
               >
-                {bias.toFixed(2)}
+                {Math.abs(bias) < 0.001 ? "0.00" : bias.toFixed(2)}
               </text>
             </g>
           );

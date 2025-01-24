@@ -1,5 +1,5 @@
 // src/components/TrainingMetrics.tsx
-import { Box, LinearProgress, Typography } from '@mui/material';
+import { Box, Button, LinearProgress, Typography } from '@mui/material';
 import React from 'react';
 
 interface TrainingMetricsProps {
@@ -8,6 +8,8 @@ interface TrainingMetricsProps {
     loss: number;
     accuracy: number;
     isTraining: boolean;
+    showProgress?: boolean;
+    onHideProgress?: () => void;
 }
 
 export const TrainingMetrics: React.FC<TrainingMetricsProps> = ({
@@ -15,19 +17,33 @@ export const TrainingMetrics: React.FC<TrainingMetricsProps> = ({
     epochs,
     loss,
     accuracy,
-    isTraining
+    isTraining,
+    showProgress = true,
+    onHideProgress
 }) => {
     const progress = (iteration/epochs) * 100;
     
     return (
         <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
             <Typography variant="h6" gutterBottom>Training Progress</Typography>
-            {isTraining ? (
+            {(isTraining || showProgress) ? (
                 <Box sx={{ width: '100%' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="body2" color="textSecondary">
-                            Epoch {iteration} of {epochs}
-                        </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Typography variant="body2" color="textSecondary">
+                                Epoch {iteration} of {epochs}
+                            </Typography>
+                            {!isTraining && onHideProgress && (
+                                <Button
+                                    size="small"
+                                    onClick={onHideProgress}
+                                    sx={{ minWidth: 'auto', p: 0.5 }}
+                                >
+                                    Hide
+                                </Button>
+                            )}
+                        </Box>
+
                         <Typography variant="body2" color="textSecondary">
                             {progress.toFixed(1)}%
                         </Typography>

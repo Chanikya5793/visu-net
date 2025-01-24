@@ -30,9 +30,9 @@ export class FitnessTrainer implements ITrainer {
     // Initialize with valid training options and higher learning rate
     this.network.train(this.trainingData, {
       iterations: 1,
-      errorThresh: 0.01,
+      errorThresh: 0.0000000000000000000001,
       log: false,
-      learningRate: 0.03  // Increased learning rate
+      learningRate: 0.01  // Increased learning rate
     });
     this.normalizeWeights();  // Initialize weights properly
   }
@@ -76,25 +76,29 @@ export class FitnessTrainer implements ITrainer {
       // Layer-specific scaling factors
       const scale = Math.sqrt(2.0 / (fanIn + fanOut));
       const layerPosition = idx / (networkState.layers.length - 1); // 0 to 1
-      const positionScale = 0.8 + 0.4 * Math.sin(layerPosition * Math.PI); // Varies between 0.8 and 1.2
-
+      const positionScale = 0.9 + 0.2 * Math.sin(layerPosition * Math.PI); // Reduced variation (0.9 to 1.1)
+      
       // Initialize weights with position-dependent scaling
       layer.weights = layer.weights.map((neuronWeights: number[], neuronIdx: number) => {
         const neuronPosition = neuronIdx / layer.weights.length;
-        const neuronScale = scale * positionScale * (0.9 + 0.2 * Math.cos(neuronPosition * Math.PI));
+        const neuronScale = scale * positionScale * (0.95 + 0.1 * Math.cos(neuronPosition * Math.PI)); // Reduced variation
         
         return neuronWeights.map((_, inputIdx: number) => {
           const inputPosition = inputIdx / neuronWeights.length;
-          const connectionStrength = 0.8 + 0.4 * Math.sin((inputPosition + neuronPosition) * Math.PI);
-          return (Math.random() * 2 - 1) * neuronScale * connectionStrength;
+          const connectionStrength = 0.9 + 0.2 * Math.sin((inputPosition + neuronPosition) * Math.PI); // Increased base strength
+          const weight = (Math.random() * 2 - 1) * neuronScale * connectionStrength;
+          return weight === 0 ? 0.01 : weight; // Ensure no zero weights
         });
       });
-
-      // Initialize biases with position-dependent values
+      
+      // Initialize biases with improved position-dependent values
       if (layer.biases) {
         layer.biases = layer.biases.map((_: any, i: number) => {
           const position = i / layer.biases.length;
-          return 0.01 * Math.sin(position * Math.PI);
+          // Use a combination of sine and cosine for more varied initialization
+          const baseBias = 0.2 * (Math.sin(position * Math.PI) + Math.cos(position * Math.PI * 0.5));
+          // Add small random variation
+          return baseBias + (Math.random() * 0.1 - 0.05); // Base bias + random noise
         });
       }
     });
@@ -158,10 +162,13 @@ export class FitnessTrainer implements ITrainer {
 
       this.isTraining = true;
       const networkState = this.network.toJSON();
+      const initialLearningRate = this.learningRate;
+      let consecutiveNaNCount = 0;
+      const maxConsecutiveNaN = 3;
 
       await this.network.trainAsync(this.trainingData, {
         iterations: this.totalEpochs,
-        errorThresh: 0.001,
+        errorThresh: 0.0000000000000000000001,
         log: true,
         logPeriod: 1,
         learningRate: this.learningRate,
@@ -181,13 +188,32 @@ export class FitnessTrainer implements ITrainer {
             return true;
           }
 
-          // Prevent NaN propagation
-          if (isNaN(stats.error)) {
-            this.network.fromJSON(this.trainingState || networkState);
-            this.setLearningRate(this.learningRate * 0.5);
+          // Enhanced loss explosion detection and handling
+          if (isNaN(stats.error) || stats.error > 1e6) {
+            consecutiveNaNCount++;
+            if (consecutiveNaNCount >= maxConsecutiveNaN) {
+              // Reset to last known good state and significantly reduce learning rate
+              this.network.fromJSON(this.trainingState || networkState);
+              this.setLearningRate(initialLearningRate * 0.1);
+              consecutiveNaNCount = 0;
+              console.warn('Loss explosion detected. Resetting network state and reducing learning rate.');
+            } else {
+              // Temporary recovery attempt with reduced learning rate
+              this.setLearningRate(this.learningRate * 0.5);
+            }
             return false;
           }
 
+          // Learning rate adaptation based on error trends
+          if (this.currentEpoch > 1 && stats.error < this.lastError * 0.95) {
+            // Gradual learning rate increase if error is consistently decreasing
+            this.setLearningRate(Math.min(this.learningRate * 1.05, 0.9));
+          } else if (stats.error > this.lastError * 1.1) {
+            // Quick learning rate reduction if error increases significantly
+            this.setLearningRate(this.learningRate * 0.5);
+          }
+
+          consecutiveNaNCount = 0; // Reset counter on successful iteration
           this.updateActivations();
           this.updateNetworkState();
           options.onIteration?.(this.currentEpoch, stats.error);
@@ -241,7 +267,7 @@ export class FitnessTrainer implements ITrainer {
     // Initialize with valid training options
     this.network.train(this.trainingData, {
       iterations: 1,
-      errorThresh: 0.01, // Changed from 1 to a valid value
+      errorThresh: 0.0000000000000000000001, // Changed from 1 to a valid value
       log: false
     });
   }
@@ -457,7 +483,16 @@ export class FitnessTrainer implements ITrainer {
   }
 
   setLearningRate(rate: number): void {
-    this.learningRate = Math.min(Math.max(rate, 0.001), 1.0); // Clamp between 0.001 and 1.0
+    // Implement more conservative learning rate bounds
+    const minRate = 0.0001;
+    const maxRate = 0.9;
+    const clampedRate = Math.min(Math.max(rate, minRate), maxRate);
+    
+    // Smooth learning rate changes
+    const currentRate = this.learningRate;
+    const smoothingFactor = 0.9;
+    this.learningRate = currentRate * smoothingFactor + clampedRate * (1 - smoothingFactor);
+
     const networkState = this.network.toJSON();
     networkState.trainOpts = {
       ...networkState.trainOpts,

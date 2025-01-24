@@ -31,9 +31,9 @@ export class WeatherTrainer implements ITrainer {
     // Initialize with valid training options and higher learning rate
     this.network.train(this.trainingData, {
       iterations: 1,
-      errorThresh: 0.01,
+      errorThresh: 0.0000000000000000000001,
       log: false,
-      learningRate: 0.03  // Increased learning rate
+      learningRate: 0.01  // Increased learning rate
     });
     this.normalizeWeights();  // Initialize weights properly
   }
@@ -87,7 +87,7 @@ export class WeatherTrainer implements ITrainer {
     };
     this.network.train([dummyData], {
       iterations: 1,
-      errorThresh: 0.01,
+      errorThresh: 0.00000000000000001,
       log: false
     });
 
@@ -188,7 +188,7 @@ export class WeatherTrainer implements ITrainer {
 
       await this.network.trainAsync(this.trainingData, {
         iterations: this.totalEpochs,
-        errorThresh: 0.001,
+        errorThresh: 0.0000000000000000000001,
         log: true,
         logPeriod: 1,
         learningRate: this.learningRate,
