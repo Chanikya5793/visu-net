@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[build.environment]
+  NODE_VERSION = "18.20.6"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+[context.production.environment]
+  CXXFLAGS = "--std=c++11"
+  PKG_CONFIG_PATH = "/usr/lib/x86_64-linux-gnu/pkgconfig"
+  NODE_OPTIONS = "--openssl-legacy-provider"
