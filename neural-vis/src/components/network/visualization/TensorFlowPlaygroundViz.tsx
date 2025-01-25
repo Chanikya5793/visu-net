@@ -169,7 +169,7 @@ export const TensorFlowPlaygroundViz: React.FC<TensorFlowPlaygroundVizProps> = (
   // Constants for visualization
   const NEURON_RADIUS = 12;
   const LAYER_SPACING = 150;
-  const VERTICAL_SPACING = 40;
+  const VERTICAL_SPACING = 80;  // Increased from 40 to 80
   const CANVAS_PADDING = 50;
   const CONNECTION_ANIMATION_SPEED = 0.02;
 
@@ -183,7 +183,7 @@ export const TensorFlowPlaygroundViz: React.FC<TensorFlowPlaygroundVizProps> = (
     // Set canvas size based on network architecture
     const maxNeuronsInLayer = Math.max(...layers);
     canvas.width = LAYER_SPACING * (layers.length + 1) + 2 * CANVAS_PADDING;
-    canvas.height = VERTICAL_SPACING * maxNeuronsInLayer + 2 * CANVAS_PADDING;
+    canvas.height = VERTICAL_SPACING * maxNeuronsInLayer + 2 * CANVAS_PADDING - 0.9;  // Adjusted height calculation
 
     // Set up mouse event handlers
     const handleMouseMove = (event: MouseEvent) => {
