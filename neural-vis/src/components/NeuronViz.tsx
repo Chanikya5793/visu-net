@@ -96,10 +96,13 @@ export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
         setSelectedNeuron={setSelectedNeuron}
       />
 
+      {/* Comment out or remove this component call */}
+      {/* 
       <TensorFlowPlaygroundViz
         {...props}
         showGradients={showGradients}
       />
+      */}
 
       {/* Layer Statistics and Performance Metrics */}
       <Box sx={{ mt: 4 }}>
