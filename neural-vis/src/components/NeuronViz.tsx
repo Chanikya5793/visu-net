@@ -45,6 +45,7 @@ import { NetworkControls } from './network/NetworkControls';
 import { ErrorSurfaceViz } from './network/visualization/ErrorSurfaceViz';
 import { LayerComparison } from './network/visualization/LayerComparison';
 import { NetworkVisualization } from './network/visualization/NetworkVisualization';
+import { TensorFlowPlaygroundViz } from './network/visualization/TensorFlowPlaygroundViz';
 
 export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
   // State management
@@ -93,6 +94,11 @@ export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
         showGradients={showGradients}
         selectedNeuron={selectedNeuron}
         setSelectedNeuron={setSelectedNeuron}
+      />
+
+      <TensorFlowPlaygroundViz
+        {...props}
+        showGradients={showGradients}
       />
 
       {/* Layer Statistics and Performance Metrics */}
@@ -144,4 +150,4 @@ export const NeuronViz: React.FC<NeuronVizProps> = (props) => {
       />
     </Box>
   );
-}; 
+};

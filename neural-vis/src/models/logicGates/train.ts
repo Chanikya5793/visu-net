@@ -267,11 +267,18 @@ export class LogicGateTrainer implements ITrainer {
 
   private updateActivations(): void {
     const networkState = this.network.toJSON();
+    const currentInput = this.trainingData[this.currentEpoch % this.trainingData.length]?.input || [];
+
     this.activations = networkState.layers.map((layer: any, layerIndex: number) => {
+      // For input layer, use the current input values directly
+      if (layerIndex === 0) {
+        return currentInput;
+      }
+
       if (layer.biases) {
         return layer.biases.map((_: any, i: number) => {
           const weights = layer.weights[i] || [];
-          const prevActivations = this.activations[this.activations.length - 1] || [];
+          const prevActivations = this.activations[layerIndex - 1] || [];
           
           // Improved weighted sum calculation
           const weightedSum = weights.reduce((sum: number, w: number, idx: number) => {

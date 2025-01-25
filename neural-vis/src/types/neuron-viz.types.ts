@@ -27,6 +27,12 @@ export interface NeuronInfo {
   index: number;
   value: number;
   weights?: number[];
+  bias?: number;
+  gradient?: number;
+  connections?: {
+    incoming: number[];
+    outgoing: number[];
+  };
 }
 
 export interface NetworkStatsType {
@@ -34,4 +40,4 @@ export interface NetworkStatsType {
   weightStd: number;
   biasMean: number;
   biasStd: number;
-} 
+}

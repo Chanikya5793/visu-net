@@ -18,10 +18,11 @@
  */
 
 import { Box, Paper, Typography, useTheme } from '@mui/material';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { NeuronInfo, NeuronVizProps } from '../../../types/neuron-viz.types';
 import { LayerAnalysisContainer } from '../analytics/LayerAnalysisContainer';
 import { InfoTooltip } from '../controls/InfoTooltip';
+import { EnhancedNeuronDetailDialog } from '../dialogs/EnhancedNeuronDetailDialog';
 import { NetworkStats } from '../metrics/NetworkStats';
 import { ActivationPatterns } from './ActivationPatterns';
 import { ConnectionLabel } from './ConnectionLabel';
@@ -62,6 +63,16 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 }) => {
   const theme = useTheme();
   const svgRef = useRef<SVGSVGElement>(null);
+  const [showNeuronDetail, setShowNeuronDetail] = useState(false);
+
+  // Helper function to calculate point on bezier curve
+  const bezierPoint = (p0: number, p1: number, p2: number, p3: number, t: number): number => {
+    const oneMinusT = 1 - t;
+    return Math.pow(oneMinusT, 3) * p0 +
+           3 * Math.pow(oneMinusT, 2) * t * p1 +
+           3 * oneMinusT * Math.pow(t, 2) * p2 +
+           Math.pow(t, 3) * p3;
+  };
 
   // =============================================
   // Visual Constants - Adjust these to change network layout
@@ -271,164 +282,190 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     }
   };
 
-  const renderConnections = () => (
-    <g className="connections">
-      {layers.map((neuronsCount, layerIndex) => {
-        if (layerIndex === 0) return null;
-        const prevLayerNeurons = layers[layerIndex - 1];
+  const renderConnections = () => {
+    return (
+      <g className="connections">
+        {layers.map((neuronsCount, layerIndex) => {
+          if (layerIndex === 0) return null;
+          const prevLayerNeurons = layers[layerIndex - 1];
 
-        return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
-          Array.from({ length: neuronsCount }).map((_, toIdx) => {
-            // Fix: Correct weight indexing
-            const weight = weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
-            const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
-            const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
-            
-            const fromPos = getNeuronPosition(layerIndex - 1, fromIdx);
-            const toPos = getNeuronPosition(layerIndex, toIdx);
-            
-            const isInputLayer = layerIndex === 1;
-            const connectionStrength = getConnectionStrength(layerIndex, fromActivation, toActivation, weight);
-            const isActive = connectionStrength > getActivityThreshold(layerIndex);
-            const connectionOpacity = getConnectionOpacity(layerIndex, connectionStrength);
-            const strokeWidth = getConnectionWidth(layerIndex, weight);
-            
-            // Calculate label position
-            let labelX, labelY, path;
-            let controlPoint1X = 0, controlPoint1Y = 0, controlPoint2X = 0, controlPoint2Y = 0;
-            
-            if (isInputLayer) {
-              // For input layer, use curved connections
-              const dx = toPos.x - fromPos.x;
-              const dy = toPos.y - fromPos.y;
-              const midX = (fromPos.x + toPos.x) / 2;
-              const midY = (fromPos.y + toPos.y) / 2;
+          return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
+            Array.from({ length: neuronsCount }).map((_, toIdx) => {
+              const weight = weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
+              const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
+              const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
               
-              const curveFactor = 0.2;
-              const curveHeight = Math.min(Math.abs(dy), 50) * (dy > 0 ? 1 : -1);
-              controlPoint1X = midX - dx * curveFactor;
-              controlPoint1Y = midY - curveHeight;
-              controlPoint2X = midX + dx * curveFactor;
-              controlPoint2Y = midY - curveHeight;
+              const fromPos = getNeuronPosition(layerIndex - 1, fromIdx);
+              const toPos = getNeuronPosition(layerIndex, toIdx);
               
-              path = `M ${fromPos.x} ${fromPos.y} 
-                     C ${controlPoint1X} ${controlPoint1Y},
-                       ${controlPoint2X} ${controlPoint2Y},
-                       ${toPos.x} ${toPos.y}`;
+              const isInputLayer = layerIndex === 1;
+              const connectionStrength = getConnectionStrength(layerIndex, fromActivation, toActivation, weight);
+              const isActive = connectionStrength > getActivityThreshold(layerIndex);
+              const connectionOpacity = getConnectionOpacity(layerIndex, connectionStrength);
+              const strokeWidth = getConnectionWidth(layerIndex, weight);
               
-              // Calculate label position along curve
-              const t = getShuffledPosition(layerIndex, fromIdx, toIdx);
-              labelX = bezierPoint(fromPos.x, controlPoint1X, controlPoint2X, toPos.x, t);
-              labelY = bezierPoint(fromPos.y, controlPoint1Y, controlPoint2Y, toPos.y, t);
-            } else {
-              // For other layers, use straight lines
-              path = `M ${fromPos.x} ${fromPos.y} L ${toPos.x} ${toPos.y}`;
-              const t = getShuffledPosition(layerIndex, fromIdx, toIdx);
-              labelX = fromPos.x + (toPos.x - fromPos.x) * t;
-              labelY = fromPos.y + (toPos.y - fromPos.y) * t;
-            }
-            
-            // Color based on activity for input layer, weight sign for others
-            const connectionColor = isInputLayer ?
-              theme.palette.primary.main :
-              (weight > 0 ? theme.palette.success.main : theme.palette.error.main);
-            
-            return (
-              <g key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}>
-                <path
-                  d={path}
-                  fill="none"
-                  stroke={connectionColor}
-                  strokeWidth={strokeWidth}
-                  opacity={connectionOpacity}
+              let labelX: number, labelY: number, path: string;
+              let controlPoint1X = 0, controlPoint1Y = 0, controlPoint2X = 0, controlPoint2Y = 0;
+              
+              if (isInputLayer) {
+                const dx = toPos.x - fromPos.x;
+                const dy = toPos.y - fromPos.y;
+                const midX = (fromPos.x + toPos.x) / 2;
+                const midY = (fromPos.y + toPos.y) / 2;
+                
+                // Enhanced S-curve for input layer connections
+                const curveFactor = 0.3; // Increased for more pronounced curve
+                const curveHeight = Math.min(Math.abs(dy) * 1.2, 60) * (dy > 0 ? 1 : -1);
+                controlPoint1X = midX - dx * curveFactor;
+                controlPoint1Y = midY - curveHeight;
+                controlPoint2X = midX + dx * curveFactor;
+                controlPoint2Y = midY - curveHeight;
+                
+                path = `M ${fromPos.x} ${fromPos.y} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${toPos.x} ${toPos.y}`;
+                
+                const t = getShuffledPosition(layerIndex, fromIdx, toIdx);
+                labelX = bezierPoint(fromPos.x, controlPoint1X, controlPoint2X, toPos.x, t);
+                labelY = bezierPoint(fromPos.y, controlPoint1Y, controlPoint2Y, toPos.y, t);
+              } else {
+                path = `M ${fromPos.x} ${fromPos.y} L ${toPos.x} ${toPos.y}`;
+                const t = getShuffledPosition(layerIndex, fromIdx, toIdx);
+                labelX = fromPos.x + (toPos.x - fromPos.x) * t;
+                labelY = fromPos.y + (toPos.y - fromPos.y) * t;
+              }
+              
+              // TensorFlow Playground-style colors
+              const connectionColor = isInputLayer
+                ? '#2196f3' // Consistent blue for input connections
+                : weight > 0 ? '#23c566' : '#ff4081'; // Green for positive, pink for negative
+              
+              return (
+                <g 
+                  key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}
+                  onMouseEnter={() => {
+                    // Highlight connected neurons
+                    const fromNeuron = document.querySelector(`#neuron-${layerIndex-1}-${fromIdx}`);
+                    const toNeuron = document.querySelector(`#neuron-${layerIndex}-${toIdx}`);
+                    if (fromNeuron) fromNeuron.setAttribute('filter', 'url(#neuron-highlight)');
+                    if (toNeuron) toNeuron.setAttribute('filter', 'url(#neuron-highlight)');
+                  }}
+                  onMouseLeave={() => {
+                    // Remove highlight
+                    const fromNeuron = document.querySelector(`#neuron-${layerIndex-1}-${fromIdx}`);
+                    const toNeuron = document.querySelector(`#neuron-${layerIndex}-${toIdx}`);
+                    if (fromNeuron) fromNeuron.removeAttribute('filter');
+                    if (toNeuron) toNeuron.removeAttribute('filter');
+                  }}
                 >
-                  {isInputLayer && (
+                  <defs>
+                    <filter id={`glow-${layerIndex}-${fromIdx}-${toIdx}`}>
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                    <linearGradient id={`gradient-${layerIndex}-${fromIdx}-${toIdx}`} gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor={connectionColor} stopOpacity="0.3"/>
+                      <stop offset="50%" stopColor={connectionColor} stopOpacity="0.6"/>
+                      <stop offset="100%" stopColor={connectionColor} stopOpacity="0.3"/>
+                    </linearGradient>
+                    <filter id="neuron-highlight">
+                      <feGaussianBlur stdDeviation="3" result="blur"/>
+                      <feFlood floodColor="#ffeb3b" floodOpacity="0.5"/>
+                      <feComposite in2="blur" operator="in"/>
+                      <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  
+                  {/* Base connection path */}
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke={`url(#gradient-${layerIndex}-${fromIdx}-${toIdx})`}
+                    strokeWidth={strokeWidth * 1.5}
+                    opacity={connectionOpacity * 0.3}
+                  />
+                  
+                  {/* Animated connection path */}
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke={connectionColor}
+                    strokeWidth={strokeWidth}
+                    opacity={connectionOpacity}
+                    filter={isActive ? `url(#glow-${layerIndex}-${fromIdx}-${toIdx})` : ''}
+                  >
+                    <animate
+                      attributeName="strokeDashoffset"
+                      values="0;30"
+                      dur="1.5s"
+                      repeatCount="indefinite"
+                    />
+                    <animate
+                      attributeName="strokeDasharray"
+                      values="3,3;6,6"
+                      dur="1.5s"
+                      repeatCount="indefinite"
+                    />
+                  </path>
+                  
+                  {/* Flowing particles */}
+                  {isActive && (
                     <>
-                      <defs>
-                        <filter id={`glow-${layerIndex}-${fromIdx}-${toIdx}`}>
-                          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                          <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                      </defs>
-                      {/* Base connection with glow effect */}
-                      <animate
-                        attributeName="opacity"
-                        values={`${connectionOpacity};${connectionOpacity * 0.6};${connectionOpacity}`}
-                        dur="2s"
-                        repeatCount="indefinite"
-                        begin={`${(fromIdx + toIdx) * 0.2}s`}
-                      />
-                      {/* Flowing particles */}
                       <circle r="3" fill={connectionColor}>
                         <animateMotion
-                          dur="1.5s"
+                          dur="1.2s"
                           repeatCount="indefinite"
-                          begin={`${(fromIdx + toIdx) * 0.2}s`}
+                          begin={`${(fromIdx + toIdx) * 0.1}s`}
                           path={path}
-                        />
+                        >
+                          <mpath href={`#path-${layerIndex}-${fromIdx}-${toIdx}`} />
+                        </animateMotion>
                         <animate
                           attributeName="opacity"
                           values="0.8;0.4;0.8"
-                          dur="1.5s"
+                          dur="1.2s"
                           repeatCount="indefinite"
-                          begin={`${(fromIdx + toIdx) * 0.2}s`}
                         />
                       </circle>
-                      {/* Secondary particle for enhanced flow effect */}
+                      
                       <circle r="2" fill={connectionColor}>
                         <animateMotion
-                          dur="1.5s"
+                          dur="1.2s"
                           repeatCount="indefinite"
-                          begin={`${(fromIdx + toIdx) * 0.2 + 0.75}s`}
+                          begin={`${(fromIdx + toIdx) * 0.1 + 0.6}s`}
                           path={path}
                         />
                         <animate
                           attributeName="opacity"
                           values="0.6;0.3;0.6"
-                          dur="1.5s"
+                          dur="1.2s"
                           repeatCount="indefinite"
-                          begin={`${(fromIdx + toIdx) * 0.2 + 0.75}s`}
                         />
                       </circle>
-                      {/* Dynamic glow effect */}
-                      <animate
-                        attributeName="filter"
-                        values={`url(#glow-${layerIndex}-${fromIdx}-${toIdx});none`}
-                        dur="2s"
-                        repeatCount="indefinite"
-                        begin={`${(fromIdx + toIdx) * 0.2}s`}
-                      />
                     </>
                   )}
-                </path>
-                {!isInputLayer && (
-                  <ConnectionLabel
-                    weight={Number(weight.toFixed(2))}
-                    fromActivation={Number(fromActivation.toFixed(2))}
-                    toActivation={Number(toActivation.toFixed(2))}
-                    x={labelX}
-                    y={labelY}
-                    isInputLayer={isInputLayer}
-                  />
-                )}
-              </g>
-            );
-          })
-        );
-      })}
-    </g>
-  );
-
-  // Helper function to calculate point on bezier curve
-  const bezierPoint = (p0: number, p1: number, p2: number, p3: number, t: number) => {
-    const oneMinusT = 1 - t;
-    return Math.pow(oneMinusT, 3) * p0 +
-           3 * Math.pow(oneMinusT, 2) * t * p1 +
-           3 * oneMinusT * Math.pow(t, 2) * p2 +
-           Math.pow(t, 3) * p3;
+                  
+                  {!isInputLayer && (
+                    <ConnectionLabel
+                      weight={Number(weight.toFixed(2))}
+                      fromActivation={Number(fromActivation.toFixed(2))}
+                      toActivation={Number(toActivation.toFixed(2))}
+                      x={labelX}
+                      y={labelY}
+                      isInputLayer={isInputLayer}
+                    />
+                  )}
+                </g>
+              );
+            })
+          );
+        })}
+      </g>
+    );
   };
 
   const renderLayerStats = () => (
@@ -496,6 +533,17 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           );
         })}
       </Box>
+
+      {/* Neuron Detail Dialog */}
+      <EnhancedNeuronDetailDialog
+        open={showNeuronDetail}
+        onClose={() => setShowNeuronDetail(false)}
+        neuron={selectedNeuron}
+        weights={weights}
+        biases={biases}
+        activations={activations}
+        gradients={gradients}
+      />
     </Box>
   );
 
@@ -509,19 +557,98 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           const gradient = activation * bias;
           const neuronColor = getNeuronColor(layerIndex, neuronIndex);
           const pos = getNeuronPosition(layerIndex, neuronIndex);
+          const isActive = Math.abs(activation) > 0.1;
 
           return (
             <g 
               key={`neuron-${layerIndex}-${neuronIndex}`}
               transform={`translate(${pos.x}, ${pos.y})`}
             >
-              {/* Neuron circle */}
+              {/* Neuron glow effect */}
+              <defs>
+                <filter id={`neuron-glow-${layerIndex}-${neuronIndex}`}>
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+                <radialGradient id={`neuron-gradient-${layerIndex}-${neuronIndex}`}>
+                  <stop offset="0%" stopColor={neuronColor} stopOpacity="1"/>
+                  <stop offset="70%" stopColor={neuronColor} stopOpacity="0.8"/>
+                  <stop offset="100%" stopColor={neuronColor} stopOpacity="0.2"/>
+                </radialGradient>
+              </defs>
+
+              {/* Neuron background glow */}
+              {isActive && (
+                <circle
+                  r={neuronRadius * 1.5}
+                  fill={`url(#neuron-gradient-${layerIndex}-${neuronIndex})`}
+                  opacity="0.3"
+                >
+                  <animate
+                    attributeName="r"
+                    values={`${neuronRadius * 1.5};${neuronRadius * 1.8};${neuronRadius * 1.5}`}
+                    dur="2s"
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    values="0.3;0.1;0.3"
+                    dur="2s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+              )}
+
+              {/* Main neuron circle */}
               <circle
                 r={neuronRadius}
                 fill={neuronColor}
-                stroke={theme.palette.grey[800]}
+                stroke="#ffffff"
                 strokeWidth={1.5}
-                onClick={() => setSelectedNeuron({ layer: layerIndex, index: neuronIndex, value: activation })}
+                filter={isActive ? `url(#neuron-glow-${layerIndex}-${neuronIndex})` : ''}
+                onClick={() => {
+                  setSelectedNeuron({ 
+                    layer: layerIndex, 
+                    index: neuronIndex, 
+                    value: activation,
+                    weights: weights?.[layerIndex]?.[neuronIndex] || [],
+                    bias: bias,
+                    gradient: gradient,
+                    connections: {
+                      incoming: weights?.[layerIndex - 1]?.map(w => w[neuronIndex]) || [],
+                      outgoing: weights?.[layerIndex]?.[neuronIndex] || []
+                    }
+                  });
+                  setShowNeuronDetail(true);
+                }}
+                onMouseEnter={(e) => {
+                  const tooltip = document.createElement('div');
+                  tooltip.className = 'neuron-tooltip';
+                  tooltip.style.position = 'absolute';
+                  tooltip.style.left = `${e.clientX + 10}px`;
+                  tooltip.style.top = `${e.clientY + 10}px`;
+                  tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                  tooltip.style.color = 'white';
+                  tooltip.style.padding = '8px';
+                  tooltip.style.borderRadius = '4px';
+                  tooltip.style.fontSize = '12px';
+                  tooltip.style.zIndex = '1000';
+                  tooltip.innerHTML = `
+                    <div><strong>Layer ${layerIndex}</strong> (Neuron ${neuronIndex})</div>
+                    <div>Activation: ${activation.toFixed(3)}</div>
+                    <div>Bias: ${bias.toFixed(3)}</div>
+                    ${gradient ? `<div>Gradient: ${gradient.toFixed(3)}</div>` : ''}
+                    <div style="margin-top:4px;font-size:10px">Click for more details</div>
+                  `;
+                  document.body.appendChild(tooltip);
+                }}
+                onMouseLeave={() => {
+                  const tooltip = document.querySelector('.neuron-tooltip');
+                  if (tooltip) tooltip.remove();
+                }}
                 style={{ cursor: 'pointer' }}
               >
                 <title>
@@ -529,6 +656,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                   Activation: {activation.toFixed(3)}
                   Bias: {bias.toFixed(3)}
                 </title>
+                {isActive && (
+                  <animate
+                    attributeName="r"
+                    values={`${neuronRadius};${neuronRadius * 1.1};${neuronRadius}`}
+                    dur="1.5s"
+                    repeatCount="indefinite"
+                  />
+                )}
               </circle>
 
               {/* Gradient overlay for visualization */}
@@ -544,7 +679,9 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 y={neuronRadius * 2}
                 fontSize={10}
                 textAnchor="middle"
-                fill={theme.palette.text.primary}
+                fill="#ffffff"
+                stroke="#000000"
+                strokeWidth="0.5"
                 fontWeight="bold"
                 opacity={Math.abs(bias) < 0.001 ? 0.5 : 1}
               >
@@ -560,8 +697,9 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           y={getLayerLabelPosition(layerIndex).y}
           textAnchor="middle"
           fill={getLayerColor(layerIndex, layers.length)}
-          fontSize={12}
+          fontSize={14}
           fontWeight="bold"
+          filter="url(#text-shadow)"
         >
           {layerIndex === 0 ? 'Input Layer' : 
            layerIndex === layers.length - 1 ? 'Output Layer' : 
@@ -570,7 +708,6 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       </g>
     ));
   };
-
   // =============================================
   // Main Render
   // =============================================
@@ -644,6 +781,17 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           <WeightDistribution weights={weights} />
         )}
       </Box>
+
+      {/* Neuron Detail Dialog */}
+      <EnhancedNeuronDetailDialog
+        open={showNeuronDetail}
+        onClose={() => setShowNeuronDetail(false)}
+        neuron={selectedNeuron}
+        weights={weights}
+        biases={biases}
+        activations={activations}
+        gradients={gradients}
+      />
     </Box>
   );
 };
