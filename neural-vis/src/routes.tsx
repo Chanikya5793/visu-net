@@ -3,7 +3,7 @@ import {
   Dashboard,
   Description,
   Science,
-  Settings as SettingsIcon
+  Settings
 } from '@mui/icons-material';
 import {
   Box,
@@ -17,6 +17,12 @@ import {
   useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { lazy } from 'react';
+import LandingPage from './pages/LandingPage';
+import NetworkPage from './pages/NetworkPage';
+import Documentation from './components/network/documentation/Documentation';
+import Experiments from './components/network/experiments/Experiments';
+import SettingsPage from './components/settings/Settings';
 
 const DRAWER_WIDTH = 240;
 
@@ -30,7 +36,7 @@ const menuItems = [
   { text: 'Neural Network', icon: <BubbleChart />, path: '/network' },
   { text: 'Documentation', icon: <Description />, path: '/docs' },
   { text: 'Experiments', icon: <Science />, path: '/experiments' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { text: 'Settings', icon: <Settings />, path: '/settings' },
 ];
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -67,3 +73,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     </Drawer>
   );
 }
+
+export const routes = [
+  {
+    path: '/',
+    element: <LandingPage />
+  },
+  {
+    path: '/network',
+    element: <NetworkPage />
+  },
+  {
+    path: '/docs',
+    element: <Documentation />
+  },
+  {
+    path: '/experiments',
+    element: <Experiments />
+  },
+  {
+    path: '/settings',
+    element: <SettingsPage />
+  }
+];
