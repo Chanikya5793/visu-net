@@ -1,9 +1,45 @@
 // src/components/DatasetSelector.tsx
-import React from 'react';
-import { 
-  Box, Typography, FormControl, InputLabel, 
-  Select, MenuItem, SelectChangeEvent 
+/**
+ * DatasetSelector Component
+ * 
+ * A React component that provides a dropdown interface for selecting training datasets.
+ * 
+ * Features:
+ * - Centrally aligned dropdown menu
+ * - Pre-configured dataset options
+ * - Custom styling with Material-UI
+ * 
+ * Available Datasets:
+ * - Logic Gates Truth Tables
+ * - Fitness Classification
+ * - Weather Prediction
+ * 
+ * Props:
+ * @param {string} dataset - Currently selected dataset value
+ * @param {function} onChange - Callback function triggered when dataset selection changes
+ * 
+ * Customization:
+ * - To add new datasets, add new MenuItem components with appropriate values
+ * - Styling can be modified through the sx prop on Box and Select components
+ * 
+ * Usage:
+ * ```tsx
+ * <DatasetSelector
+ *   dataset="logicGates"
+ *   onChange={handleDatasetChange}
+ * />
+ * ```
+ */
+
+import {
+    Box,
+    FormControl, InputLabel,
+    MenuItem,
+    Select,
+    SelectChangeEvent,
+    Typography
 } from '@mui/material';
+import React from 'react';
 
 interface DatasetSelectorProps {
   dataset: string;

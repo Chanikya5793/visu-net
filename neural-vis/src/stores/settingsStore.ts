@@ -1,24 +1,57 @@
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { StateCreator } from 'zustand';
 
 interface SettingsState {
+  // General Settings
   darkMode: boolean;
-  animationSpeed: number;
-  nodeSize: number;
   showLabels: boolean;
+
+  // Visualization Settings
+  neuronRadius: number;
+  layerSpacing: number;
+  verticalSpacing: number;
+  connectionOpacity: number;
+  showActivationValues: boolean;
+  showWeightValues: boolean;
+  animationSpeed: number;
+
+  // Training Settings
+  batchSize: number;
+  epochs: number;
+  validationSplit: number;
+  earlyStoppingPatience: number;
+
+  // Setters
   setDarkMode: (darkMode: boolean) => void;
-  setAnimationSpeed: (speed: number) => void;
-  setNodeSize: (size: number) => void;
   setShowLabels: (show: boolean) => void;
+  setNeuronRadius: (radius: number) => void;
+  setLayerSpacing: (spacing: number) => void;
+  setVerticalSpacing: (spacing: number) => void;
+  setConnectionOpacity: (opacity: number) => void;
+  setShowActivationValues: (show: boolean) => void;
+  setShowWeightValues: (show: boolean) => void;
+  setAnimationSpeed: (speed: number) => void;
+  setBatchSize: (size: number) => void;
+  setEpochs: (epochs: number) => void;
+  setValidationSplit: (split: number) => void;
+  setEarlyStoppingPatience: (patience: number) => void;
   resetToDefaults: () => void;
 }
 
 const defaultSettings = {
   darkMode: false,
-  animationSpeed: 1,
-  nodeSize: 30,
   showLabels: true,
+  neuronRadius: 12,
+  layerSpacing: 150,
+  verticalSpacing: 40,
+  connectionOpacity: 0.5,
+  showActivationValues: true,
+  showWeightValues: false,
+  animationSpeed: 1,
+  batchSize: 32,
+  epochs: 100,
+  validationSplit: 0.2,
+  earlyStoppingPatience: 10
 };
 
 type SettingsStateCreator = StateCreator<
@@ -33,13 +66,22 @@ export const useSettingsStore = create<SettingsState>()(
     ((set) => ({
       ...defaultSettings,
       setDarkMode: (darkMode: boolean) => set({ darkMode }),
-      setAnimationSpeed: (animationSpeed: number) => set({ animationSpeed }),
-      setNodeSize: (nodeSize: number) => set({ nodeSize }),
       setShowLabels: (showLabels: boolean) => set({ showLabels }),
-      resetToDefaults: () => set(defaultSettings),
+      setNeuronRadius: (neuronRadius: number) => set({ neuronRadius }),
+      setLayerSpacing: (layerSpacing: number) => set({ layerSpacing }),
+      setVerticalSpacing: (verticalSpacing: number) => set({ verticalSpacing }),
+      setConnectionOpacity: (connectionOpacity: number) => set({ connectionOpacity }),
+      setShowActivationValues: (showActivationValues: boolean) => set({ showActivationValues }),
+      setShowWeightValues: (showWeightValues: boolean) => set({ showWeightValues }),
+      setAnimationSpeed: (animationSpeed: number) => set({ animationSpeed }),
+      setBatchSize: (batchSize: number) => set({ batchSize }),
+      setEpochs: (epochs: number) => set({ epochs }),
+      setValidationSplit: (validationSplit: number) => set({ validationSplit }),
+      setEarlyStoppingPatience: (earlyStoppingPatience: number) => set({ earlyStoppingPatience }),
+      resetToDefaults: () => set(defaultSettings)
     })) as SettingsStateCreator,
     {
-      name: 'settings-storage',
+      name: 'settings-storage'
     }
   )
 );

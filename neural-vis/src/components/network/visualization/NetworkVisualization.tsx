@@ -17,8 +17,9 @@
  * as they are handled by the parent NeuronViz component.
  */
 
-import { Box, Paper, Typography, useTheme } from '@mui/material';
+import { Box, Paper, Typography } from '@mui/material';
 import React, { useRef, useState } from 'react';
+import { useSettingsStore } from '../../../stores/settingsStore';
 import { NeuronInfo, NeuronVizProps } from '../../../types/neuron-viz.types';
 import { LayerAnalysisContainer } from '../analytics/LayerAnalysisContainer';
 import { InfoTooltip } from '../controls/InfoTooltip';
@@ -61,9 +62,19 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   learningRate,
   performanceMetrics
 }) => {
-  const theme = useTheme();
+// Remove unused theme import since it's not being used
   const svgRef = useRef<SVGSVGElement>(null);
   const [showNeuronDetail, setShowNeuronDetail] = useState(false);
+
+  // Get visualization settings from store
+  const {
+    neuronRadius: settingsNeuronRadius,
+    layerSpacing: settingsLayerSpacing,
+    verticalSpacing: settingsVerticalSpacing,
+    connectionOpacity,
+    showActivationValues,
+    showWeightValues
+  } = useSettingsStore();
 
   // Helper function to calculate point on bezier curve
   const bezierPoint = (p0: number, p1: number, p2: number, p3: number, t: number): number => {
@@ -82,8 +93,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   const width = 1200;   // Total width of the visualization
   const height = 600;   // Total height of the visualization
   
-  // Neuron appearance
-  const neuronRadius = 15;  // Size of each neuron circle
+  // Neuron appearance - Use settings value
+  const neuronRadius = settingsNeuronRadius;  // Size of each neuron circle
   
   // =============================================
   // Padding Configuration - Adjust these to control exact spacing from edges
@@ -91,29 +102,25 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   
   // Individual padding for each side (in pixels)
   const paddingLeft = 100;    // Space from left edge
-  const paddingRight = 100;   // Space from right edge
-  const paddingTop = 10;      // Space from top edge
+  //const paddingRight = 100;   // Space from right edge
+ // const paddingTop = 10;      // Space from top edge
   const paddingBottom = 70;  // Space from bottom edge (more space for labels)
   
   // =============================================
   // Spacing Calculations - Derived from padding values
   // =============================================
   
-  // Horizontal spacing
-  const usableWidth = width - (paddingLeft + paddingRight);  // Width available for layers
-  const layerSpacing = usableWidth / (layers.length - 0.5);    // Distance between layers
-  
-  // Vertical spacing
-  const usableHeight = height - (paddingTop + paddingBottom-0.9);  // Height available for neurons
-  const maxNeuronsInLayer = Math.max(...layers);
-  
-  // Calculate space between neurons
-  // Formula explanation:
-  // - usableHeight: total vertical space available
-  // - maxNeuronsInLayer: maximum number of neurons in any layer
-  // - The +2 in denominator adds extra spacing between neurons
-  // - Increase +2 for more spacing, decrease for less spacing
-  const verticalSpacing = usableHeight / (maxNeuronsInLayer + 0.1);  // Space between neurons
+  // Horizontal spacing - Use settings value
+  //const usableWidth = width - (paddingLeft + paddingRight);  // Width available for layers
+  const layerSpacing = settingsLayerSpacing;    // Distance between layers
+  //const layerSpacing = Math.min(settingsLayerSpacing, usableWidth / (layers.length - 1));
+  // Vertical spacing - Use settings value and usableHeight for dynamic scaling
+  //const usableHeight = height - (paddingTop + paddingBottom - 0.9);  // Height available for neurons
+  //const maxNeuronsInLayer = Math.max(...layers);
+ // const verticalSpacing = Math.min(settingsVerticalSpacing, usableHeight / (maxNeuronsInLayer - 1));
+
+  // Use settings value for vertical spacing
+  const verticalSpacing = settingsVerticalSpacing;  // Space between neurons
   
   // =============================================
   // Position Calculation Helper - Uses the new padding system
@@ -230,13 +237,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     return baseStrength * (0.3 + 0.7 * activationFactor); // Ensure minimum visibility
   };
 
+  // Update connection opacity to use settings value
   const getConnectionOpacity = (
     layerIndex: number,
     connectionStrength: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Higher base opacity for input layer
-    const baseOpacity = isInputLayer ? 0.8 : 0.5;
+    // Higher base opacity for input layer, modified by settings
+    const baseOpacity = (isInputLayer ? 0.8 : 0.5) * connectionOpacity;
     return baseOpacity + Math.min(connectionStrength, 1) * 0.2;
   };
 
@@ -604,6 +612,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
               {/* Main neuron circle */}
               <circle
+                className="neuron-circle"
                 r={neuronRadius}
                 fill={neuronColor}
                 stroke="#ffffff"
@@ -674,19 +683,37 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 />
               )}
 
-              {/* Bias value display */}
-              <text
-                y={neuronRadius * 2}
-                fontSize={10}
-                textAnchor="middle"
-                fill="#ffffff"
-                stroke="#000000"
-                strokeWidth="0.5"
-                fontWeight="bold"
-                opacity={Math.abs(bias) < 0.001 ? 0.5 : 1}
-              >
-                {Math.abs(bias) < 0.001 ? "0.00" : bias.toFixed(2)}
-              </text>
+              {/* Activation value display */}
+              {showActivationValues && (
+                <text
+                  y={-neuronRadius}
+                  fontSize={10}
+                  textAnchor="middle"
+                  fill="#ffffff"
+                  stroke="#000000"
+                  strokeWidth="0.5"
+                  fontWeight="bold"
+                  opacity={Math.abs(activation) < 0.001 ? 0.5 : 1}
+                >
+                  {Math.abs(activation) < 0.001 ? "0.00" : activation.toFixed(2)}
+                </text>
+              )}
+
+              {/* Bias/Weight value display */}
+              {showWeightValues && (
+                <text
+                  y={neuronRadius * 2}
+                  fontSize={10}
+                  textAnchor="middle"
+                  fill="#ffffff"
+                  stroke="#000000"
+                  strokeWidth="0.5"
+                  fontWeight="bold"
+                  opacity={Math.abs(bias) < 0.001 ? 0.5 : 1}
+                >
+                  {Math.abs(bias) < 0.001 ? "0.00" : bias.toFixed(2)}
+                </text>
+              )}
             </g>
           );
         })}

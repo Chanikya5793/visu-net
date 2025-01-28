@@ -1,47 +1,122 @@
-import { Box, FormControlLabel, Grid, Paper, Slider, Switch, TextField, Typography } from '@mui/material';
-import React, { useState } from 'react';
+/**
+ * Network Settings Component
+ * 
+ * A React component that provides a comprehensive interface for configuring both visualization
+ * and training settings of the neural network.
+ * 
+ * Features:
+ * 
+ * Visualization Settings:
+ * - Neuron Size (8-20 units)
+ * - Layer Spacing (100-300 units)
+ * - Vertical Spacing (20-80 units)
+ * - Connection Opacity (0.1-1.0)
+ * - Animation Speed (0.1-2.0x)
+ * - Toggle Activation Values
+ * - Toggle Weight Values
+ * 
+ * Training Settings:
+ * - Batch Size (1-512)
+ * - Epochs (1-1000)
+ * - Validation Split (10-50%)
+ * - Early Stopping Patience (1-50 epochs)
+ * 
+ * State Management:
+ * - Uses useSettingsStore for global state
+ * - Implements temporary state for handling unsaved changes
+ * - Provides reset to defaults functionality
+ * 
+ * Customization:
+ * - All numerical inputs have configurable min/max values
+ * - Slider steps can be adjusted for finer control
+ * - Layout uses Material-UI Grid system for responsive design
+ * 
+ * @component
+ */
 
-interface VisualizationSettings {
-  neuronRadius: number;
-  layerSpacing: number;
-  verticalSpacing: number;
-  connectionOpacity: number;
-  showActivationValues: boolean;
-  showWeightValues: boolean;
-  animationSpeed: number;
-}
-
-interface TrainingSettings {
-  batchSize: number;
-  epochs: number;
-  validationSplit: number;
-  earlyStoppingPatience: number;
-}
+import { Box, Button, FormControlLabel, Grid, Paper, Slider, Switch, TextField, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { useSettingsStore } from '../../../stores/settingsStore';
 
 const Settings: React.FC = () => {
-  const [vizSettings, setVizSettings] = useState<VisualizationSettings>({
-    neuronRadius: 12,
-    layerSpacing: 150,
-    verticalSpacing: 40,
-    connectionOpacity: 0.7,
-    showActivationValues: true,
-    showWeightValues: true,
-    animationSpeed: 1.0
+  // Get settings and setter functions from the global store
+  const {
+    neuronRadius,
+    layerSpacing,
+    verticalSpacing,
+    connectionOpacity,
+    showActivationValues,
+    showWeightValues,
+    animationSpeed,
+    setNeuronRadius,
+    setLayerSpacing,
+    setVerticalSpacing,
+    setConnectionOpacity,
+    setShowActivationValues,
+    setShowWeightValues,
+    setAnimationSpeed,
+    batchSize,
+    epochs,
+    validationSplit,
+    earlyStoppingPatience,
+    setBatchSize,
+    setEpochs,
+    setValidationSplit,
+    setEarlyStoppingPatience,
+    resetToDefaults
+  } = useSettingsStore();
+
+  // Temporary state for handling unsaved changes
+  const [tempSettings, setTempSettings] = useState({
+    neuronRadius,
+    layerSpacing,
+    verticalSpacing,
+    connectionOpacity,
+    showActivationValues,
+    showWeightValues,
+    animationSpeed,
+    batchSize,
+    epochs,
+    validationSplit,
+    earlyStoppingPatience
   });
 
-  const [trainSettings, setTrainSettings] = useState<TrainingSettings>({
-    batchSize: 32,
-    epochs: 100,
-    validationSplit: 0.2,
-    earlyStoppingPatience: 10
-  });
+  // Sync temporary settings with global settings when they change
+  useEffect(() => {
+    setTempSettings({
+      neuronRadius,
+      layerSpacing,
+      verticalSpacing,
+      connectionOpacity,
+      showActivationValues,
+      showWeightValues,
+      animationSpeed,
+      batchSize,
+      epochs,
+      validationSplit,
+      earlyStoppingPatience
+    });
+  }, [neuronRadius, layerSpacing, verticalSpacing, connectionOpacity, showActivationValues,
+      showWeightValues, animationSpeed, batchSize, epochs, validationSplit, earlyStoppingPatience]);
 
-  const handleVizSettingChange = (field: keyof VisualizationSettings, value: any) => {
-    setVizSettings(prev => ({ ...prev, [field]: value }));
+  // Apply temporary settings to global state
+  const applyChanges = () => {
+    setNeuronRadius(tempSettings.neuronRadius);
+    setLayerSpacing(tempSettings.layerSpacing);
+    setVerticalSpacing(tempSettings.verticalSpacing);
+    setConnectionOpacity(tempSettings.connectionOpacity);
+    setShowActivationValues(tempSettings.showActivationValues);
+    setShowWeightValues(tempSettings.showWeightValues);
+    setAnimationSpeed(tempSettings.animationSpeed);
+    setBatchSize(tempSettings.batchSize);
+    setEpochs(tempSettings.epochs);
+    setValidationSplit(tempSettings.validationSplit);
+    setEarlyStoppingPatience(tempSettings.earlyStoppingPatience);
   };
 
-  const handleTrainSettingChange = (field: keyof TrainingSettings, value: any) => {
-    setTrainSettings(prev => ({ ...prev, [field]: value }));
+  // Reset all settings to their default values
+  const handleReset = () => {
+    resetToDefaults();
   };
 
   return (
@@ -51,6 +126,7 @@ const Settings: React.FC = () => {
       </Typography>
 
       <Grid container spacing={3}>
+        {/* Visualization Settings Section */}
         <Grid item xs={12} md={6}>
           <Paper elevation={3} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -58,11 +134,12 @@ const Settings: React.FC = () => {
             </Typography>
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Neuron Size Control */}
               <Box>
                 <Typography gutterBottom>Neuron Size</Typography>
                 <Slider
-                  value={vizSettings.neuronRadius}
-                  onChange={(_, value) => handleVizSettingChange('neuronRadius', value)}
+                  value={tempSettings.neuronRadius}
+                  onChange={(_, value) => setTempSettings(prev => ({ ...prev, neuronRadius: value as number }))}
                   min={8}
                   max={20}
                   step={1}
@@ -71,11 +148,12 @@ const Settings: React.FC = () => {
                 />
               </Box>
 
+              {/* Layer Spacing Control */}
               <Box>
                 <Typography gutterBottom>Layer Spacing</Typography>
                 <Slider
-                  value={vizSettings.layerSpacing}
-                  onChange={(_, value) => handleVizSettingChange('layerSpacing', value)}
+                  value={tempSettings.layerSpacing}
+                  onChange={(_, value) => setTempSettings(prev => ({ ...prev, layerSpacing: value as number }))}
                   min={100}
                   max={300}
                   step={10}
@@ -84,11 +162,12 @@ const Settings: React.FC = () => {
                 />
               </Box>
 
+              {/* Vertical Spacing Control */}
               <Box>
                 <Typography gutterBottom>Vertical Spacing</Typography>
                 <Slider
-                  value={vizSettings.verticalSpacing}
-                  onChange={(_, value) => handleVizSettingChange('verticalSpacing', value)}
+                  value={tempSettings.verticalSpacing}
+                  onChange={(_, value) => setTempSettings(prev => ({ ...prev, verticalSpacing: value as number }))}
                   min={20}
                   max={80}
                   step={5}
@@ -97,11 +176,12 @@ const Settings: React.FC = () => {
                 />
               </Box>
 
+              {/* Connection Opacity Control */}
               <Box>
                 <Typography gutterBottom>Connection Opacity</Typography>
                 <Slider
-                  value={vizSettings.connectionOpacity}
-                  onChange={(_, value) => handleVizSettingChange('connectionOpacity', value)}
+                  value={tempSettings.connectionOpacity}
+                  onChange={(_, value) => setTempSettings(prev => ({ ...prev, connectionOpacity: value as number }))}
                   min={0.1}
                   max={1}
                   step={0.1}
@@ -110,11 +190,12 @@ const Settings: React.FC = () => {
                 />
               </Box>
 
+              {/* Animation Speed Control */}
               <Box>
                 <Typography gutterBottom>Animation Speed</Typography>
                 <Slider
-                  value={vizSettings.animationSpeed}
-                  onChange={(_, value) => handleVizSettingChange('animationSpeed', value)}
+                  value={tempSettings.animationSpeed}
+                  onChange={(_, value) => setTempSettings(prev => ({ ...prev, animationSpeed: value as number }))}
                   min={0.1}
                   max={2}
                   step={0.1}
@@ -123,21 +204,23 @@ const Settings: React.FC = () => {
                 />
               </Box>
 
+              {/* Activation Values Toggle */}
               <FormControlLabel
                 control={
                   <Switch
-                    checked={vizSettings.showActivationValues}
-                    onChange={(e) => handleVizSettingChange('showActivationValues', e.target.checked)}
+                    checked={tempSettings.showActivationValues}
+                    onChange={(e) => setTempSettings(prev => ({ ...prev, showActivationValues: e.target.checked }))}
                   />
                 }
                 label="Show Activation Values"
               />
 
+              {/* Weight Values Toggle */}
               <FormControlLabel
                 control={
                   <Switch
-                    checked={vizSettings.showWeightValues}
-                    onChange={(e) => handleVizSettingChange('showWeightValues', e.target.checked)}
+                    checked={tempSettings.showWeightValues}
+                    onChange={(e) => setTempSettings(prev => ({ ...prev, showWeightValues: e.target.checked }))}
                   />
                 }
                 label="Show Weight Values"
@@ -146,6 +229,7 @@ const Settings: React.FC = () => {
           </Paper>
         </Grid>
 
+        {/* Training Settings Section */}
         <Grid item xs={12} md={6}>
           <Paper elevation={3} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -153,29 +237,32 @@ const Settings: React.FC = () => {
             </Typography>
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Batch Size Input */}
               <TextField
                 label="Batch Size"
                 type="number"
-                value={trainSettings.batchSize}
-                onChange={(e) => handleTrainSettingChange('batchSize', parseInt(e.target.value))}
+                value={tempSettings.batchSize}
+                onChange={(e) => setTempSettings(prev => ({ ...prev, batchSize: parseInt(e.target.value) }))}
                 inputProps={{ min: 1, max: 512 }}
                 helperText="Number of samples per gradient update"
               />
 
+              {/* Epochs Input */}
               <TextField
                 label="Epochs"
                 type="number"
-                value={trainSettings.epochs}
-                onChange={(e) => handleTrainSettingChange('epochs', parseInt(e.target.value))}
+                value={tempSettings.epochs}
+                onChange={(e) => setTempSettings(prev => ({ ...prev, epochs: parseInt(e.target.value) }))}
                 inputProps={{ min: 1, max: 1000 }}
                 helperText="Number of complete passes through the training dataset"
               />
 
+              {/* Validation Split Control */}
               <Box>
                 <Typography gutterBottom>Validation Split</Typography>
                 <Slider
-                  value={trainSettings.validationSplit}
-                  onChange={(_, value) => handleTrainSettingChange('validationSplit', value)}
+                  value={tempSettings.validationSplit}
+                  onChange={(_, value) => setTempSettings(prev => ({ ...prev, validationSplit: value as number }))}
                   min={0.1}
                   max={0.5}
                   step={0.05}
@@ -185,14 +272,21 @@ const Settings: React.FC = () => {
                 />
               </Box>
 
+              {/* Early Stopping Patience Input */}
               <TextField
                 label="Early Stopping Patience"
                 type="number"
-                value={trainSettings.earlyStoppingPatience}
-                onChange={(e) => handleTrainSettingChange('earlyStoppingPatience', parseInt(e.target.value))}
+                value={tempSettings.earlyStoppingPatience}
+                onChange={(e) => setTempSettings(prev => ({ ...prev, earlyStoppingPatience: parseInt(e.target.value) }))}
                 inputProps={{ min: 1, max: 50 }}
                 helperText="Number of epochs to wait before early stopping"
               />
+
+              {/* Action Buttons */}
+              <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button variant="outlined" onClick={handleReset}>Reset to Defaults</Button>
+                <Button variant="contained" onClick={applyChanges}>Apply Changes</Button>
+              </Box>
             </Box>
           </Paper>
         </Grid>
