@@ -66,7 +66,7 @@ const defaultSettings = {
   showWeightValues: false,
   animationSpeed: 1,
   batchSize: 32,
-  epochs: 100,
+  epochs: 1000,
   validationSplit: 0.2,
   earlyStoppingPatience: 10
 };
