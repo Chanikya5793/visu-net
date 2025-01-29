@@ -38,12 +38,29 @@ interface SettingsState {
   resetToDefaults: () => void;
 }
 
+// Detailed descriptions for each setting
+export const settingDescriptions = {
+  darkMode: "Toggle between light and dark color themes for better visibility in different environments.",
+  showLabels: "Display labels for neurons and layers to better understand the network structure.",
+  neuronRadius: "Control the size of neurons in the visualization. Larger values make neurons more prominent.",
+  layerSpacing: "Adjust the horizontal distance between network layers. Affects overall network width.",
+  verticalSpacing: "Set the vertical gap between neurons in each layer. Impacts network height.",
+  connectionOpacity: "Control the visibility of connections between neurons. Higher values make connections more visible.",
+  showActivationValues: "Display current activation values for each neuron during network operation.",
+  showWeightValues: "Show connection weights between neurons for detailed network analysis.",
+  animationSpeed: "Adjust the speed of training and propagation animations.",
+  batchSize: "Number of training examples used in one iteration of model training.",
+  epochs: "Total number of complete passes through the training dataset.",
+  validationSplit: "Portion of data reserved for validation during training.",
+  earlyStoppingPatience: "Number of epochs to wait before stopping if no improvement is seen."
+};
+
 const defaultSettings = {
   darkMode: false,
   showLabels: true,
   neuronRadius: 12,
-  layerSpacing: 150,
-  verticalSpacing: 40,
+  layerSpacing: 250,
+  verticalSpacing: 50,
   connectionOpacity: 0.5,
   showActivationValues: true,
   showWeightValues: false,

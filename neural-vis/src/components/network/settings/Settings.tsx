@@ -34,9 +34,10 @@
  * @component
  */
 
-import { Box, Button, FormControlLabel, Grid, Paper, Slider, Switch, TextField, Typography } from '@mui/material';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { Box, Button, FormControlLabel, Grid, IconButton, Paper, Slider, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
-import { useSettingsStore } from '../../../stores/settingsStore';
+import { settingDescriptions, useSettingsStore } from '../../../stores/settingsStore';
 
 const Settings: React.FC = () => {
   // Get settings and setter functions from the global store
@@ -136,12 +137,17 @@ const Settings: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {/* Neuron Size Control */}
               <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography gutterBottom>Neuron Size</Typography>
+                <Tooltip title={settingDescriptions.neuronRadius} componentsProps={{ tooltip: { sx: { fontSize: '1.2rem' } } }}>
+                  <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
                 <Slider
                   value={tempSettings.neuronRadius}
                   onChange={(_, value) => setTempSettings(prev => ({ ...prev, neuronRadius: value as number }))}
                   min={8}
-                  max={20}
+                  max={30}
                   step={1}
                   marks
                   valueLabelDisplay="auto"
@@ -150,12 +156,17 @@ const Settings: React.FC = () => {
 
               {/* Layer Spacing Control */}
               <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography gutterBottom>Layer Spacing</Typography>
+                <Tooltip title={settingDescriptions.layerSpacing} componentsProps={{ tooltip: { sx: { fontSize: '1.2rem' } } }}>
+                  <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
                 <Slider
                   value={tempSettings.layerSpacing}
                   onChange={(_, value) => setTempSettings(prev => ({ ...prev, layerSpacing: value as number }))}
                   min={100}
-                  max={300}
+                  max={400}
                   step={10}
                   marks
                   valueLabelDisplay="auto"
@@ -164,12 +175,17 @@ const Settings: React.FC = () => {
 
               {/* Vertical Spacing Control */}
               <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography gutterBottom>Vertical Spacing</Typography>
+                <Tooltip title={settingDescriptions.verticalSpacing} componentsProps={{ tooltip: { sx: { fontSize: '1.2rem' } } }}>
+                  <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
                 <Slider
                   value={tempSettings.verticalSpacing}
                   onChange={(_, value) => setTempSettings(prev => ({ ...prev, verticalSpacing: value as number }))}
                   min={20}
-                  max={80}
+                  max={100}
                   step={5}
                   marks
                   valueLabelDisplay="auto"
@@ -178,7 +194,12 @@ const Settings: React.FC = () => {
 
               {/* Connection Opacity Control */}
               <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography gutterBottom>Connection Opacity</Typography>
+                <Tooltip title={settingDescriptions.connectionOpacity} componentsProps={{ tooltip: { sx: { fontSize: '1.2rem' } } }}>
+                  <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
                 <Slider
                   value={tempSettings.connectionOpacity}
                   onChange={(_, value) => setTempSettings(prev => ({ ...prev, connectionOpacity: value as number }))}
@@ -191,8 +212,13 @@ const Settings: React.FC = () => {
               </Box>
 
               {/* Animation Speed Control */}
-              <Box>
+              <Box sx={{ borderRadius: '19px', padding: '1px', backgroundColor: 'rgba(0,0,0,0.02)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography gutterBottom>Animation Speed</Typography>
+                <Tooltip title={settingDescriptions.animationSpeed} componentsProps={{ tooltip: { sx: { fontSize: '1.2rem' } } }}>
+                  <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
                 <Slider
                   value={tempSettings.animationSpeed}
                   onChange={(_, value) => setTempSettings(prev => ({ ...prev, animationSpeed: value as number }))}
