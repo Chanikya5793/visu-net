@@ -264,28 +264,70 @@ const Settings: React.FC = () => {
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {/* Batch Size Input */}
-              <TextField
-                label="Batch Size"
-                type="number"
-                value={tempSettings.batchSize}
-                onChange={(e) => setTempSettings(prev => ({ ...prev, batchSize: parseInt(e.target.value) }))}
-                inputProps={{ min: 1, max: 512 }}
-                helperText="Number of samples per gradient update"
-              />
+              <Box>
+                <Typography sx={{ fontSize: '1.2rem', mb: 1 }}>
+                  Batch Size
+                  <Tooltip title={
+                    <Typography sx={{ fontSize: '1.2rem', p: 1 }}>
+                      Controls how many training examples are processed together in one step.
+                      Larger batch sizes can speed up training but require more memory.
+                      Smaller batch sizes often lead to better generalization.
+                      Recommended: 32-128 for most cases.
+                    </Typography>
+                  }>
+                    <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                  </Tooltip>
+                </Typography>
+                <TextField
+                  type="number"
+                  value={tempSettings.batchSize}
+                  onChange={(e) => setTempSettings(prev => ({ ...prev, batchSize: parseInt(e.target.value) }))}
+                  inputProps={{ min: 1, max: 512 }}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '1.2rem' } }}
+                  fullWidth
+                />
+              </Box>
 
               {/* Epochs Input */}
-              <TextField
-                label="Epochs"
-                type="number"
-                value={tempSettings.epochs}
-                onChange={(e) => setTempSettings(prev => ({ ...prev, epochs: parseInt(e.target.value) }))}
-                inputProps={{ min: 1, max: 1000 }}
-                helperText="Number of complete passes through the training dataset"
-              />
+              <Box>
+                <Typography sx={{ fontSize: '1.2rem', mb: 1 }}>
+                  Training Epochs
+                  <Tooltip title={
+                    <Typography sx={{ fontSize: '1.2rem', p: 1 }}>
+                      Defines how many times the entire dataset is processed during training.
+                      More epochs allow more learning but may lead to overfitting.
+                      Use early stopping to prevent overtraining.
+                      Recommended: Start with 100 and adjust based on performance.
+                    </Typography>
+                  }>
+                    <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                  </Tooltip>
+                </Typography>
+                <TextField
+                  type="number"
+                  value={tempSettings.epochs}
+                  onChange={(e) => setTempSettings(prev => ({ ...prev, epochs: parseInt(e.target.value) }))}
+                  inputProps={{ min: 1, max: 1000 }}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '1.2rem' } }}
+                  fullWidth
+                />
+              </Box>
 
               {/* Validation Split Control */}
               <Box>
-                <Typography gutterBottom>Validation Split</Typography>
+                <Typography sx={{ fontSize: '1.2rem', mb: 1 }}>
+                  Validation Split
+                  <Tooltip title={
+                    <Typography sx={{ fontSize: '1.2rem', p: 1 }}>
+                      Percentage of training data reserved for validation.
+                      Helps monitor model performance on unseen data.
+                      Higher values give more reliable validation but leave less data for training.
+                      Recommended: 20% (0.2) for most cases.
+                    </Typography>
+                  }>
+                    <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                  </Tooltip>
+                </Typography>
                 <Slider
                   value={tempSettings.validationSplit}
                   onChange={(_, value) => setTempSettings(prev => ({ ...prev, validationSplit: value as number }))}
@@ -295,23 +337,39 @@ const Settings: React.FC = () => {
                   marks
                   valueLabelDisplay="auto"
                   valueLabelFormat={(value) => `${value * 100}%`}
+                  sx={{ '& .MuiSlider-markLabel': { fontSize: '1.2rem' } }}
                 />
               </Box>
 
               {/* Early Stopping Patience Input */}
-              <TextField
-                label="Early Stopping Patience"
-                type="number"
-                value={tempSettings.earlyStoppingPatience}
-                onChange={(e) => setTempSettings(prev => ({ ...prev, earlyStoppingPatience: parseInt(e.target.value) }))}
-                inputProps={{ min: 1, max: 50 }}
-                helperText="Number of epochs to wait before early stopping"
-              />
+              <Box>
+                <Typography sx={{ fontSize: '1.2rem', mb: 1 }}>
+                  Early Stopping Patience
+                  <Tooltip title={
+                    <Typography sx={{ fontSize: '1.2rem', p: 1 }}>
+                      Number of epochs to wait for improvement before stopping training.
+                      Helps prevent overfitting by stopping when model stops improving.
+                      Higher values give more chances for improvement but may waste time.
+                      Recommended: 10-20 epochs for most cases.
+                    </Typography>
+                  }>
+                    <IconButton size="small"><HelpOutlineIcon fontSize="small" /></IconButton>
+                  </Tooltip>
+                </Typography>
+                <TextField
+                  type="number"
+                  value={tempSettings.earlyStoppingPatience}
+                  onChange={(e) => setTempSettings(prev => ({ ...prev, earlyStoppingPatience: parseInt(e.target.value) }))}
+                  inputProps={{ min: 1, max: 50 }}
+                  sx={{ '& .MuiInputBase-input': { fontSize: '1.2rem' } }}
+                  fullWidth
+                />
+              </Box>
 
               {/* Action Buttons */}
               <Box sx={{ mt: 2, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button variant="outlined" onClick={handleReset}>Reset to Defaults</Button>
-                <Button variant="contained" onClick={applyChanges}>Apply Changes</Button>
+                <Button variant="outlined" onClick={handleReset} sx={{ fontSize: '1.2rem' }}>Reset to Defaults</Button>
+                <Button variant="contained" onClick={applyChanges} sx={{ fontSize: '1.2rem' }}>Apply Changes</Button>
               </Box>
             </Box>
           </Paper>
