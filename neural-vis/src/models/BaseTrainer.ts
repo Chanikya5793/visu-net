@@ -93,6 +93,14 @@ export abstract class BaseTrainer implements ITrainer {
           if (onIteration) {
             onIteration(epoch, error);
           }
+
+          // Check for stop signal
+          if (this.shouldStop) {
+            if (onStop) {
+              onStop('Training stopped by user');
+            }
+            return;
+          }
         }
 
         // Check early stopping if validation is enabled
