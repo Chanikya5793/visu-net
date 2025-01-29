@@ -1,8 +1,7 @@
 import * as brain from 'brain.js';
-import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
+import { ITrainer, PerformanceMetrics, TrainingData, TrainingOptions } from '../TrainerInterface';
 import { weatherData } from './data';
 
-// Add at the top of the file after imports
 interface LayerStats {
   mean: number;
   std: number;
@@ -22,7 +21,7 @@ export class WeatherTrainer implements ITrainer {
   private biases: number[][] = [];
   private gradients: number[][][] = [];
   private learningRate: number = 0.01;
-  private trainingData: any[];
+  private trainingData: TrainingData[];
   private gradientNorm: number = 0;
 
   constructor(customDataset?: any[]) {
@@ -36,340 +35,6 @@ export class WeatherTrainer implements ITrainer {
       learningRate: 0.01  // Increased learning rate
     });
     this.normalizeWeights();  // Initialize weights properly
-  }
-
-  private calculateLayerStatistics(networkState: any): LayerStats[] {
-    return networkState.layers.map((layer: any) => {
-      if (!layer.weights || !layer.weights.length) return {
-        mean: 0,
-        std: 1,
-        size: 0
-      };
-      
-      const weights: number[] = layer.weights.flat().filter((w: number) => Number.isFinite(w));
-      if (!weights.length) return {
-        mean: 0,
-        std: 1,
-        size: 0
-      };
-
-      const mean = weights.reduce((sum: number, w: number) => sum + w, 0) / weights.length;
-      const variance = weights.reduce((sum: number, w: number) => 
-        sum + Math.pow(w - mean, 2), 0) / weights.length;
-
-      return {
-        mean: Number.isFinite(mean) ? mean : 0,
-        std: Math.sqrt(Number.isFinite(variance) ? variance + 1e-10 : 1),
-        size: layer.weights[0]?.length || 0
-      };
-    });
-  }
-  
-  getNetwork(): brain.NeuralNetwork {
-    return this.network;
-  }
-
-  initNetwork(layers?: number[]): void {
-    const inputSize = this.trainingData[0].input.length;
-    const outputSize = this.trainingData[0].output.length;
-    const layerSize = layers?.[0] || Math.max(4, Math.ceil((inputSize + outputSize) / 2));
-    
-    this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [layerSize],
-      activation: 'leaky-relu',
-      learningRate: this.learningRate
-    });
-
-    // Initialize with balanced data distribution
-    const dummyData = {
-      input: Array(inputSize).fill(0).map(() => Math.random() * 2 - 1),
-      output: Array(outputSize).fill(0)
-    };
-    this.network.train([dummyData], {
-      iterations: 1,
-      errorThresh: 0.00000000000000001,
-      log: false
-    });
-
-    // Enhanced Xavier/Glorot initialization with layer-specific scaling
-    const networkState = this.network.toJSON();
-    networkState.layers.forEach((layer: any, idx: number) => {
-      if (!layer.weights) return;
-
-      // Calculate fan in/out with improved connectivity
-      const fanIn = idx === 0 ? inputSize : 
-        (networkState.layers[idx - 1]?.weights?.[0]?.length || inputSize);
-      const fanOut = layer.weights[0]?.length || outputSize;
-      
-      // Layer-specific scaling factors
-      const scale = Math.sqrt(2.0 / (fanIn + fanOut));
-      const layerPosition = idx / (networkState.layers.length - 1); // 0 to 1
-      const positionScale = 0.8 + 0.4 * Math.sin(layerPosition * Math.PI); // Varies between 0.8 and 1.2
-
-      // Initialize weights with position-dependent scaling
-      layer.weights = layer.weights.map((neuronWeights: number[], neuronIdx: number) => {
-        const neuronPosition = neuronIdx / layer.weights.length;
-        const neuronScale = scale * positionScale * (0.9 + 0.2 * Math.cos(neuronPosition * Math.PI));
-        
-        return neuronWeights.map((_, inputIdx: number) => {
-          const inputPosition = inputIdx / neuronWeights.length;
-          const connectionStrength = 0.8 + 0.4 * Math.sin((inputPosition + neuronPosition) * Math.PI);
-          return (Math.random() * 2 - 1) * neuronScale * connectionStrength;
-        });
-      });
-
-      // Initialize biases with position-dependent values
-      if (layer.biases) {
-        layer.biases = layer.biases.map((_: any, i: number) => {
-          const position = i / layer.biases.length;
-          return 0.01 * Math.sin(position * Math.PI);
-        });
-      }
-    });
-
-    this.network.fromJSON(networkState);
-    this.updateNetworkState();
-  }
-
-  normalizeWeights(): void {
-    const networkState = this.network.toJSON();
-    
-    networkState.layers.forEach((layer: any, layerIdx: number) => {
-      if (!layer.weights || !layer.weights[0]) return;
-
-      // Calculate layer-wise statistics with improved stability
-      const allWeights = layer.weights.flat();
-      const mean = allWeights.reduce((sum: number, w: number) => sum + w, 0) / allWeights.length;
-      const variance = allWeights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / allWeights.length;
-      const std = Math.sqrt(variance + 1e-10);
-
-      // Adaptive scaling factor based on layer position
-      const layerScale = Math.sqrt(2.0 / (layer.weights.length + layer.weights[0].length));
-      const depthScale = 1.0 / Math.sqrt(networkState.layers.length - layerIdx);
-
-      layer.weights.forEach((neuronWeights: number[], neuronIdx: number) => {
-        // Calculate neuron-specific statistics
-        const neuronMean = neuronWeights.reduce((sum: number, w: number) => sum + w, 0) / neuronWeights.length;
-        const neuronStd = Math.sqrt(
-          neuronWeights.reduce((sum: number, w: number) => sum + Math.pow(w - neuronMean, 2), 0) / neuronWeights.length + 1e-10
-        );
-
-        // Normalize weights with improved stability
-        layer.weights[neuronIdx] = neuronWeights.map((w: number) => {
-          const normalized = (w - neuronMean) / neuronStd;
-          return normalized * layerScale * depthScale;
-        });
-      });
-
-      // Initialize biases with small values scaled by layer depth
-      if (layer.biases) {
-        layer.biases = layer.biases.map(() => 0.01 * depthScale);
-      }
-    });
-
-    this.network.fromJSON(networkState);
-    this.updateNetworkState();
-  }
-
-  async train(options: TrainingOptions): Promise<void> {
-    try {
-      if (this.isPaused && this.trainingState) {
-        this.network.fromJSON(this.trainingState);
-        this.isPaused = false;
-      } else {
-        this.totalEpochs = options.epochs;
-        this.currentEpoch = 0;
-        this.lastError = 1;
-        this.trainingState = null;
-      }
-
-      this.isTraining = true;
-      const networkState = this.network.toJSON();
-
-      await this.network.trainAsync(this.trainingData, {
-        iterations: this.totalEpochs,
-        errorThresh: 0.0000000000000000000001,
-        log: true,
-        logPeriod: 1,
-        learningRate: this.learningRate,
-        callback: (stats: { iterations: number, error: number }) => {
-          this.currentEpoch = stats.iterations;
-          this.lastError = stats.error;
-
-          if (!this.isTraining) {
-            this.isTraining = false;
-            options.onStop?.();
-            return true;
-          }
-
-          if (this.isPaused) {
-            this.trainingState = this.network.toJSON();
-            options.onPause?.();
-            return true;
-          }
-
-          // Prevent NaN propagation
-          if (isNaN(stats.error)) {
-            this.network.fromJSON(this.trainingState || networkState);
-            this.setLearningRate(this.learningRate * 0.5);
-            return false;
-          }
-
-          this.updateActivations();
-          this.updateNetworkState();
-          options.onIteration?.(this.currentEpoch, stats.error);
-          
-          if (this.currentEpoch >= this.totalEpochs) {
-            this.isTraining = false;
-            options.onComplete?.();
-            return true;
-          }
-          
-          return false;
-        }
-      });
-
-    } catch (error: unknown) {
-      this.isTraining = false;
-      if (error instanceof Error) {
-        console.error('Training error:', error);
-        options.onStop?.(error.message);
-      }
-    }
-  }
-
-  pause(): void {
-    if (this.isTraining) {
-      this.trainingState = this.network.toJSON(); // Save state first
-      this.isPaused = true;
-      this.isTraining = false; // Stop training like stop()
-    }
-  }
-  continue(options: TrainingOptions): void {
-    if (this.isPaused && this.trainingState) {
-      this.train(options);
-    }
-  }
-
-  stop(): void {
-    this.isTraining = false;
-    this.isPaused = false;
-    this.trainingState = null;
-  }
-
-  reset(): void {
-    this.stop();
-    this.currentEpoch = 0;
-    this.totalEpochs = 0;
-    this.lastError = 1;
-    this.isTraining = false;
-    this.isPaused = false;
-    this.initNetwork();
-    // Initialize with valid training options
-    this.network.train(this.trainingData, {
-      iterations: 1,
-      errorThresh: 0.01, // Changed from 1 to a valid value
-      log: false
-    });
-  }
-
-  predict(input: number[]): number[] {
-    const output = this.network.run(input);
-    // First normalize the output to be between 0 and 1
-    const normalizedOutput = output.map(value => Math.min(Math.max(value, 0), 1));
-    // Then scale to percentage (0-100)
-    return normalizedOutput.map(value => value * 100);
-  }
-
-  getProgress(): {
-    currentEpoch: number;
-    totalEpochs: number;
-    lastError: number;
-    isPaused: boolean;
-    isTraining: boolean;
-  } {
-    return {
-      currentEpoch: this.currentEpoch,
-      totalEpochs: this.totalEpochs,
-      lastError: this.lastError,
-      isPaused: this.isPaused,
-      isTraining: this.isTraining
-    };
-  }
-
-  private updateActivations(): void {
-    const networkState = this.network.toJSON();
-    const currentInput = this.trainingData[this.currentEpoch % this.trainingData.length]?.input || [];
-
-    this.activations = networkState.layers.map((layer: any, layerIndex: number) => {
-      // For input layer, use the current input values directly
-      if (layerIndex === 0) {
-        return currentInput;
-      }
-
-      if (layer.biases) {
-        return layer.biases.map((_: any, i: number) => {
-          const weights = layer.weights[i] || [];
-          const prevActivations = this.activations[layerIndex - 1] || [];
-          
-          // Improved weighted sum calculation
-          const weightedSum = weights.reduce((sum: number, w: number, idx: number) => {
-            const input = prevActivations[idx] || 0;
-            return sum + w * input;
-          }, 0) + layer.biases[i];
-          
-          // Use sigmoid for output layer, leaky ReLU for hidden layers
-          if (layerIndex === networkState.layers.length - 1) {
-            return 1 / (1 + Math.exp(-weightedSum)); // sigmoid
-          }
-          return weightedSum > 0 ? weightedSum : 0.01 * weightedSum; // leaky ReLU
-        });
-      }
-      return [];
-    });
-  }
-
-  private updateNetworkState(): void {
-    const networkState = this.network.toJSON();
-    const layerStats = this.calculateLayerStatistics(networkState);
-    
-    this.activations = [
-      (networkState.layers[0].weights[0] || []).map((w: number) => {
-        const stats = layerStats[0];
-        return Number.isFinite(w) ? w / (stats.std + 1e-6) : 0;
-      }),
-      ...networkState.layers.map((layer: any, idx: number) => {
-        if (layer.biases) {
-          const stats = layerStats[idx];
-          return layer.biases.map((_: any, i: number) => {
-            const weights = layer.weights[i] || [];
-            const scaledSum = weights.reduce((sum: number, w: number) => {
-              const scaled = Number.isFinite(w) ? w / (stats.std + 1e-6) : 0;
-              return Number.isFinite(sum + scaled) ? sum + scaled : sum;
-            }, 0);
-            const weightedSum = Number.isFinite(scaledSum + layer.biases[i]) ? 
-              scaledSum + layer.biases[i] : scaledSum;
-            return weightedSum > 0 ? weightedSum : 0.02 * weightedSum;
-          });
-        }
-        return [];
-      })
-    ];
-  
-    this.weights = networkState.layers.map((layer: any, idx: number) => 
-      (layer.weights || []).map((row: number[]) => 
-        row.map((w: number) => {
-          const stats = layerStats[idx];
-          return Number.isFinite(w) ? w / (stats.std + 1e-6) : 0;
-        })
-      )
-    );
-  
-    this.biases = networkState.layers.map((layer: any) => 
-      (layer.biases || []).map((b: number) => Number.isFinite(b) ? b : 0)
-    );
-    
-    this.calculateGradients();
   }
 
   private calculateGradients(): void {
@@ -393,7 +58,6 @@ export class WeatherTrainer implements ITrainer {
           neuronWeights.forEach((weight: number, fromNeuron: number) => {
             const fromActivation = this.activations[layerIndex - 1]?.[fromNeuron] || 0;
             
-            // Different gradient calculation for output layer
             let activationGradient;
             if (isOutputLayer) {
               activationGradient = toActivation * (1 - toActivation); // sigmoid derivative
@@ -414,6 +78,218 @@ export class WeatherTrainer implements ITrainer {
     }
 
     this.gradientNorm = Math.sqrt(totalGradientSquared + 1e-10);
+  }
+
+  private updateActivations(): void {
+    const networkState = this.network.toJSON();
+    const currentInput = this.trainingData[this.currentEpoch % this.trainingData.length]?.input || [];
+
+    this.activations = networkState.layers.map((layer: any, layerIndex: number) => {
+      if (layerIndex === 0) {
+        return currentInput;
+      }
+
+      if (layer.biases) {
+        return layer.biases.map((_: any, i: number) => {
+          const weights = layer.weights[i] || [];
+          const prevActivations = this.activations[layerIndex - 1] || [];
+          
+          const weightedSum = weights.reduce((sum: number, w: number, idx: number) => {
+            const input = prevActivations[idx] || 0;
+            return sum + w * input;
+          }, 0) + layer.biases[i];
+          
+          if (layerIndex === networkState.layers.length - 1) {
+            return 1 / (1 + Math.exp(-weightedSum)); // sigmoid
+          }
+          return weightedSum > 0 ? weightedSum : 0.01 * weightedSum; // leaky ReLU
+        });
+      }
+      return [];
+    });
+  }
+
+  private updateNetworkState(): void {
+    const networkState = this.network.toJSON();
+    
+    this.weights = networkState.layers.map((layer: any) => 
+      (layer.weights || []).map((row: number[]) => [...row])
+    );
+  
+    this.biases = networkState.layers.map((layer: any) => 
+      (layer.biases || []).map((b: number) => b)
+    );
+    
+    this.calculateGradients();
+  }
+
+  getProgress(): { currentEpoch: number; totalEpochs: number; lastError: number; isTraining: boolean; gradientNorm?: number } {
+    return {
+      currentEpoch: this.currentEpoch,
+      totalEpochs: this.totalEpochs,
+      lastError: this.lastError,
+      isTraining: this.isTraining,
+      gradientNorm: this.gradientNorm
+    };
+  }
+
+  predict(input: number[]): number[] {
+    const output = this.network.run(input);
+    return Array.isArray(output) ? output : [output];
+  }
+
+  stop(): void {
+    this.isTraining = false;
+    this.isPaused = false;
+    this.trainingState = null;
+  }
+
+  reset(): void {
+    this.stop();
+    this.currentEpoch = 0;
+    this.totalEpochs = 0;
+    this.lastError = 1;
+    this.isTraining = false;
+    this.isPaused = false;
+    this.initNetwork();
+  }
+
+  async train(options: TrainingOptions): Promise<void> {
+    try {
+      if (this.isPaused && this.trainingState) {
+        this.network.fromJSON(this.trainingState);
+        this.isPaused = false;
+      } else {
+        this.totalEpochs = options.epochs;
+        this.currentEpoch = 0;
+        this.lastError = 1;
+        this.trainingState = null;
+      }
+
+      this.isTraining = true;
+      const networkState = this.network.toJSON();
+      const initialLearningRate = this.learningRate;
+      let consecutiveNaNCount = 0;
+      const maxConsecutiveNaN = 3;
+
+      await this.network.trainAsync(this.trainingData, {
+        iterations: this.totalEpochs,
+        errorThresh: 0.0000000000000000000001,
+        log: true,
+        logPeriod: 1,
+        learningRate: this.learningRate,
+        callback: (stats: { iterations: number; error: number }) => {
+          this.currentEpoch = stats.iterations;
+          this.lastError = stats.error;
+
+          if (!this.isTraining) {
+            options.onStop?.();
+            return true;
+          }
+
+          if (this.isPaused) {
+            this.trainingState = this.network.toJSON();
+            options.onPause?.();
+            return true;
+          }
+
+          if (isNaN(stats.error) || stats.error > 1e6) {
+            consecutiveNaNCount++;
+            if (consecutiveNaNCount >= maxConsecutiveNaN) {
+              this.network.fromJSON(this.trainingState || networkState);
+              this.setLearningRate(initialLearningRate * 0.1);
+              consecutiveNaNCount = 0;
+            } else {
+              this.setLearningRate(this.learningRate * 0.5);
+            }
+            return false;
+          }
+
+          this.updateActivations();
+          this.updateNetworkState();
+          options.onIteration?.(this.currentEpoch, stats.error);
+          
+          if (this.currentEpoch >= this.totalEpochs) {
+            this.isTraining = false;
+            options.onComplete?.();
+            return true;
+          }
+          
+          return false;
+        }
+      });
+    } catch (error) {
+      this.isTraining = false;
+      if (error instanceof Error) {
+        console.error('Training error:', error);
+        options.onStop?.(error.message);
+      }
+    }
+  }
+
+  getNetwork(): brain.NeuralNetwork {
+    return this.network;
+  }
+
+  initNetwork(layers?: number[]): void {
+    const inputSize = this.trainingData[0].input.length;
+    const outputSize = this.trainingData[0].output.length;
+    const layerSize = layers?.[0] || Math.max(4, Math.ceil((inputSize + outputSize) / 2));
+    
+    this.network = new brain.NeuralNetwork({
+      hiddenLayers: layers || [layerSize],
+      activation: 'leaky-relu',
+      learningRate: this.learningRate
+    });
+
+    const dummyData = {
+      input: Array(inputSize).fill(0).map(() => (Math.random() * 2 - 1) * 0.1),
+      output: Array(outputSize).fill(0).map(() => Math.random() * 0.1)
+    };
+
+    this.network.train([dummyData], {
+      iterations: 1,
+      errorThresh: 0.01,
+      log: false
+    });
+
+    const networkState = this.network.toJSON();
+    this.updateNetworkState();
+  }
+
+  normalizeWeights(): void {
+    const networkState = this.network.toJSON();
+    
+    networkState.layers.forEach((layer: any, layerIdx: number) => {
+      if (!layer.weights || !layer.weights[0]) return;
+
+      const allWeights = layer.weights.flat();
+      const mean = allWeights.reduce((sum: number, w: number) => sum + w, 0) / allWeights.length;
+      const variance = allWeights.reduce((sum: number, w: number) => sum + Math.pow(w - mean, 2), 0) / allWeights.length;
+      const std = Math.sqrt(variance + 1e-10);
+
+      const layerScale = Math.sqrt(2.0 / (layer.weights.length + layer.weights[0].length));
+      const depthScale = 1.0 / Math.sqrt(networkState.layers.length - layerIdx);
+
+      layer.weights.forEach((neuronWeights: number[], neuronIdx: number) => {
+        const neuronMean = neuronWeights.reduce((sum: number, w: number) => sum + w, 0) / neuronWeights.length;
+        const neuronStd = Math.sqrt(
+          neuronWeights.reduce((sum: number, w: number) => sum + Math.pow(w - neuronMean, 2), 0) / neuronWeights.length + 1e-10
+        );
+
+        layer.weights[neuronIdx] = neuronWeights.map((w: number) => {
+          const normalized = (w - neuronMean) / neuronStd;
+          return normalized * layerScale * depthScale;
+        });
+      });
+
+      if (layer.biases) {
+        layer.biases = layer.biases.map(() => 0.01 * depthScale);
+      }
+    });
+
+    this.network.fromJSON(networkState);
+    this.updateNetworkState();
   }
 
   getWeights(): number[][][] {
@@ -440,12 +316,12 @@ export class WeatherTrainer implements ITrainer {
       networkState.layers[layerIndex].weights[toNeuron][fromNeuron] = newWeight;
       this.network.fromJSON(networkState);
       this.updateNetworkState();
-      this.normalizeWeights();  // Normalize after weight adjustment
+      this.normalizeWeights();
     }
   }
 
   setLearningRate(rate: number): void {
-    this.learningRate = Math.min(Math.max(rate, 0.001), 1.0); // Clamp between 0.001 and 1.0
+    this.learningRate = Math.min(Math.max(rate, 0.001), 1.0);
     const networkState = this.network.toJSON();
     networkState.trainOpts = {
       ...networkState.trainOpts,
@@ -470,7 +346,6 @@ export class WeatherTrainer implements ITrainer {
   }
 
   getPerformanceMetrics(): PerformanceMetrics {
-    // Check if network is initialized
     if (!this.network || !this.isTraining && this.currentEpoch === 0) {
       return {
         accuracy: 0,
@@ -481,7 +356,6 @@ export class WeatherTrainer implements ITrainer {
     }
 
     try {
-      // Calculate metrics using test data
       let correct = 0;
       let truePositives = 0;
       let falsePositives = 0;

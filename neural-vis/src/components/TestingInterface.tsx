@@ -40,7 +40,7 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
       
       case 'weatherPrediction':
         // Single output representing probability
-        return `${(pred[0] ).toFixed(1)}% chance of rain`;
+        return pred && pred.length > 0 ? `${(Number(pred[0]) * 100).toFixed(1)}% chance of rain` : 'No prediction available';
         
       default:
         return JSON.stringify(pred);
@@ -200,7 +200,7 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
         </Box>
 
         {/* Prediction Results */}
-        {prediction.length > 0 && (
+        {prediction && prediction.length > 0 && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper' }}>
             <Typography variant="h6">Prediction Results:</Typography>
             {dataset === 'logicGates' && (
@@ -215,7 +215,7 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
             )}
             {dataset === 'weatherPrediction' && (
               <Typography>
-                Rain Probability: {(prediction[0] * 100).toFixed(2)}%
+                Rain Probability: {prediction[0] ? (Number(prediction[0]) * 100).toFixed(2) : 0}%
               </Typography>
             )}
             {dataset === 'fitnessClassification' && (
@@ -234,7 +234,7 @@ export const TestingInterface: React.FC<TestingInterfaceProps> = ({
       <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
         <Typography variant="h6">Prediction: {interpretPrediction(prediction)}</Typography>
         <Typography variant="body2" color="text.secondary">
-          Raw outputs: [{prediction.map(p => p.toFixed(4)).join(', ')}]
+          Raw outputs: [{prediction && prediction.length > 0 ? prediction.map(p => p !== undefined && p !== null ? Number(p).toFixed(4) : '0').join(', ') : ''}]
         </Typography>
       </Box>
     </Box>
