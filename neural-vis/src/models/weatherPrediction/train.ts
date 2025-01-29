@@ -1,5 +1,5 @@
 import * as brain from 'brain.js';
-import { ITrainer, PerformanceMetrics, TrainingData, TrainingOptions } from '../TrainerInterface';
+import { BrainJsTrainingOptions, ITrainer, PerformanceMetrics, TrainingData, TrainingOptions } from '../TrainerInterface';
 import { weatherData } from './data';
 
 interface LayerStats {
@@ -123,6 +123,18 @@ export class WeatherTrainer implements ITrainer {
     this.calculateGradients();
   }
 
+  private validateOnSet(data: TrainingData[]): number {
+    let totalError = 0;
+    for (const item of data) {
+      const output = this.network.run(item.input);
+      const error = output.reduce((sum: number, val: number, idx: number) => {
+        return sum + Math.pow(val - item.output[idx], 2);
+      }, 0);
+      totalError += error;
+    }
+    return totalError / data.length;
+  }
+
   getProgress(): { currentEpoch: number; totalEpochs: number; lastError: number; isTraining: boolean; gradientNorm?: number } {
     return {
       currentEpoch: this.currentEpoch,
@@ -166,18 +178,30 @@ export class WeatherTrainer implements ITrainer {
         this.trainingState = null;
       }
 
+      // Handle validation split
+      const validationSplit = options.validationSplit || 0.2;
+      const splitIndex = Math.floor(this.trainingData.length * (1 - validationSplit));
+      const trainingSet = this.trainingData.slice(0, splitIndex);
+      const validationSet = this.trainingData.slice(splitIndex);
+
+      // Early stopping setup
+      let bestError = Infinity;
+      let patienceCounter = 0;
+      const patience = options.earlyStoppingPatience || 10;
+
       this.isTraining = true;
       const networkState = this.network.toJSON();
       const initialLearningRate = this.learningRate;
       let consecutiveNaNCount = 0;
       const maxConsecutiveNaN = 3;
 
-      await this.network.trainAsync(this.trainingData, {
+      const brainJsOptions: BrainJsTrainingOptions = {
         iterations: this.totalEpochs,
         errorThresh: 0.0000000000000000000001,
         log: true,
         logPeriod: 1,
         learningRate: this.learningRate,
+        batchSize: options.batchSize,
         callback: (stats: { iterations: number; error: number }) => {
           this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
@@ -209,6 +233,24 @@ export class WeatherTrainer implements ITrainer {
           this.updateNetworkState();
           options.onIteration?.(this.currentEpoch, stats.error);
           
+          // Validate on validation set
+          const validationError = this.validateOnSet(validationSet);
+          
+          // Early stopping check
+          if (validationError < bestError) {
+            bestError = validationError;
+            patienceCounter = 0;
+            this.trainingState = this.network.toJSON(); // Save best model
+          } else {
+            patienceCounter++;
+            if (patienceCounter >= patience) {
+              this.network.fromJSON(this.trainingState); // Restore best model
+              this.isTraining = false;
+              options.onComplete?.();
+              return true;
+            }
+          }
+
           if (this.currentEpoch >= this.totalEpochs) {
             this.isTraining = false;
             options.onComplete?.();
@@ -217,7 +259,9 @@ export class WeatherTrainer implements ITrainer {
           
           return false;
         }
-      });
+      };
+
+      await this.network.trainAsync(trainingSet, brainJsOptions);
     } catch (error) {
       this.isTraining = false;
       if (error instanceof Error) {

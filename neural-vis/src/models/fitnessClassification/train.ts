@@ -1,5 +1,5 @@
 import * as brain from 'brain.js';
-import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
+import { BrainJsTrainingOptions, ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
 import { fitnessData } from './data';
 
 // Add at the top of the file after imports
@@ -166,12 +166,13 @@ export class FitnessTrainer implements ITrainer {
       let consecutiveNaNCount = 0;
       const maxConsecutiveNaN = 3;
 
-      await this.network.trainAsync(this.trainingData, {
+      const brainJsOptions: BrainJsTrainingOptions = {
         iterations: this.totalEpochs,
         errorThresh: 0.0000000000000000000001,
         log: true,
         logPeriod: 1,
         learningRate: this.learningRate,
+        batchSize: options.batchSize,
         callback: (stats: { iterations: number, error: number }) => {
           this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
@@ -226,7 +227,9 @@ export class FitnessTrainer implements ITrainer {
           
           return false;
         }
-      });
+      };
+
+      await this.network.trainAsync(this.trainingData, brainJsOptions);
 
     } catch (error: unknown) {
       this.isTraining = false;

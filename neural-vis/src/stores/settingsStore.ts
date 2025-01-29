@@ -49,10 +49,10 @@ export const settingDescriptions = {
   showActivationValues: "Display current activation values for each neuron during network operation.",
   showWeightValues: "Show connection weights between neurons for detailed network analysis.",
   animationSpeed: "Adjust the speed of training and propagation animations.",
-  batchSize: "Number of training examples used in one iteration of model training.",
-  epochs: "Total number of complete passes through the training dataset.",
-  validationSplit: "Portion of data reserved for validation during training.",
-  earlyStoppingPatience: "Number of epochs to wait before stopping if no improvement is seen."
+  batchSize: "Number of samples processed together during training. Larger batches provide more stable updates but require more memory. Range: 1-512.",
+  epochs: "Total number of complete passes through the training dataset. More epochs allow for better learning but may lead to overfitting. Range: 1-1000.",
+  validationSplit: "Portion of data reserved for validation (10-50%). Used to monitor model performance on unseen data and prevent overfitting.",
+  earlyStoppingPatience: "Number of epochs to wait before stopping training if validation performance doesn't improve. Helps prevent overfitting. Range: 1-50."
 };
 
 const defaultSettings = {

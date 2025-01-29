@@ -31,6 +31,16 @@ export interface ITrainingOptions {
   callback?: (stats: { iterations: number; error: number }) => boolean;
 }
 
+export interface BrainJsTrainingOptions {
+  iterations: number;
+  errorThresh: number;
+  log: boolean;
+  logPeriod?: number;
+  learningRate: number;
+  batchSize?: number;
+  callback?: (stats: { iterations: number; error: number }) => boolean;
+}
+
 export interface TrainingOptions {
   epochs: number;
   batchSize?: number;

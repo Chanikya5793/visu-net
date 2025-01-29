@@ -1,5 +1,5 @@
 import * as brain from 'brain.js';
-import { ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
+import { BrainJsTrainingOptions, ITrainer, PerformanceMetrics, TrainingOptions } from '../TrainerInterface';
 import { logicGateData } from './data';
 
 interface LayerStats {
@@ -149,12 +149,13 @@ export class LogicGateTrainer implements ITrainer {
       this.isTraining = true;
       const networkState = this.network.toJSON();
 
-      await this.network.trainAsync(this.trainingData, {
+      const brainJsOptions: BrainJsTrainingOptions = {
         iterations: this.totalEpochs,
-        errorThresh: 0.000000000000000000000000000000001,
+        errorThresh: 0.0000000000000000000001,
         log: true,
         logPeriod: 1,
         learningRate: this.learningRate,
+        batchSize: options.batchSize,
         callback: (stats: { iterations: number, error: number }) => {
           this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
@@ -171,7 +172,6 @@ export class LogicGateTrainer implements ITrainer {
             return true;
           }
 
-          // Prevent NaN propagation
           if (isNaN(stats.error)) {
             this.network.fromJSON(this.trainingState || networkState);
             this.setLearningRate(this.learningRate * 0.5);
@@ -190,7 +190,9 @@ export class LogicGateTrainer implements ITrainer {
           
           return false;
         }
-      });
+      };
+
+      await this.network.trainAsync(this.trainingData, brainJsOptions);
 
     } catch (error: unknown) {
       this.isTraining = false;
