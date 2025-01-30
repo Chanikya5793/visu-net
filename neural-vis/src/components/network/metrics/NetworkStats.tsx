@@ -1,18 +1,32 @@
 /**
  * NetworkStats Component
  * 
- * Displays statistical information about the neural network's weights, biases, and learning rate.
- * Shows mean, standard deviation, and other key metrics in a well-organized grid layout.
+ * A React component that displays statistical information about the neural network's
+ * current state, including weights, biases, and learning rate metrics.
+ * 
+ * Features:
+ * - Real-time weight statistics display
+ * - Bias distribution visualization
+ * - Learning rate monitoring
+ * - Statistical calculations (mean, standard deviation)
  * 
  * Props:
- * - weights: 3D array of network weights [layer][toNeuron][fromNeuron]
- * - biases: 2D array of network biases [layer][neuron]
- * - learningRate: Current learning rate of the network
+ * @param {number[][][]} weights - 3D array of network weights [layer][toNeuron][fromNeuron]
+ * @param {number[][]} biases - 2D array of network biases [layer][neuron]
+ * @param {number} learningRate - Current learning rate of the network
+ * 
+ * Statistics Displayed:
+ * - Weight mean and standard deviation
+ * - Bias mean and standard deviation
+ * - Current learning rate
+ * - Total number of parameters
  * 
  * Layout:
- * - Uses Material-UI Paper for container with consistent padding
- * - Grid layout for statistics with responsive columns
- * - Each metric has a label and value with proper spacing
+ * - Material-UI Paper container with consistent padding
+ * - Grid layout for statistics with responsive design
+ * - Clear typography hierarchy for readability
+ * 
+ * @component
  */
 
 import { Box, Paper, Typography } from '@mui/material';
@@ -100,4 +114,4 @@ export const NetworkStats: React.FC<NetworkStatsProps> = ({
       </Box>
     </Paper>
   );
-}; 
+};

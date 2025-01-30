@@ -1,3 +1,40 @@
+/**
+ * NetworkControls Component
+ * 
+ * A React component that provides the control interface for neural network visualization and training.
+ * Manages various network settings, visualization options, and training parameters.
+ * 
+ * Features:
+ * - Network architecture customization
+ * - Learning rate control
+ * - Training speed adjustment
+ * - Gradient flow visualization toggle
+ * - Network import/export functionality
+ * - Interactive tooltips for feature explanation
+ * 
+ * Props:
+ * @param {number[]} layers - Array representing network layer sizes
+ * @param {boolean} isTraining - Flag indicating if network is currently training
+ * @param {string} dataset - Current dataset being used
+ * @param {number} learningRate - Current learning rate
+ * @param {number} trainingSpeed - Current training visualization speed
+ * @param {function} onLearningRateChange - Callback for learning rate changes
+ * @param {function} onTrainingSpeedChange - Callback for training speed changes
+ * @param {function} onExportNetwork - Callback for network export
+ * @param {function} onArchitectureChange - Callback for architecture changes
+ * @param {boolean} showGradients - Flag for gradient visualization
+ * @param {function} setShowGradients - Callback for gradient visibility toggle
+ * @param {function} handleImportDialog - Callback for import dialog
+ * 
+ * Visual Components:
+ * - Architecture controls
+ * - Training parameter adjustments
+ * - Visualization toggles
+ * - Import/Export buttons
+ * 
+ * @component
+ */
+
 import { Box, Button, Divider, FormControlLabel, Switch, Tooltip, Typography } from '@mui/material';
 import React from 'react';
 import { NeuronVizProps } from '../../types/neuron-viz.types';
@@ -129,4 +166,4 @@ export const NetworkControls: React.FC<NetworkControlsProps> = ({
       </Box>
     </Box>
   );
-}; 
+};

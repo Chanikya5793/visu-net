@@ -1,23 +1,34 @@
 /**
  * ActivationPatterns Component
  * 
- * Visualizes the activation patterns of neurons in a specific layer using a bar chart visualization.
- * Each bar represents a neuron's activation value, with height and color intensity indicating strength.
+ * A React component that visualizes the activation patterns of neurons in each layer
+ * of the neural network. Provides insights into how neurons respond to input data.
+ * 
+ * Features:
+ * - Real-time activation visualization
+ * - Layer-wise neuron activity display
+ * - Interactive tooltips with activation values
+ * - Color-coded activation strength
+ * - Responsive bar chart visualization
  * 
  * Props:
- * - activations: 2D array of activation values [layer][neuron]
- * - layer: Index of the current layer being visualized
+ * @param {number[][]} activations - 2D array of activation values [layer][neuron]
+ * @param {number} layer - Current layer index being visualized
+ * @param {number[]} layers - Array containing number of neurons in each layer
  * 
- * Layout Configuration:
- * - Container: Uses Material-UI Paper with elevation and spacing
- * - Bar Chart: Responsive visualization with hover tooltips
- * - Spacing: Consistent padding and margins (adjust values below)
+ * Visual Elements:
+ * - Bar chart showing neuron activations
+ * - Color intensity indicating activation strength
+ * - Tooltips displaying exact activation values
+ * - Layer information and statistics
  * 
- * To adjust spacing:
- * - Overall padding: Modify 'p' in the Paper sx prop (currently 3)
- * - Top margin: Modify 'mt' in the Paper sx prop (currently 3)
- * - Bottom margin: Modify 'mb' in the Paper sx prop (currently 3)
- * - Chart padding: Modify 'p' in the chart container Box (currently 2)
+ * Implementation:
+ * - Uses Material-UI for layout and styling
+ * - Dynamic color scaling based on activation values
+ * - Responsive design with automatic resizing
+ * - Optimized rendering for performance
+ * 
+ * @component
  */
 
 import { Box, Paper, Typography } from '@mui/material';
@@ -131,4 +142,4 @@ export const ActivationPatterns: React.FC<ActivationPatternsProps> = ({
       </Box>
     </Paper>
   );
-}; 
+};

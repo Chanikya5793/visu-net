@@ -1,3 +1,34 @@
+/**
+ * ErrorSurfaceViz Component
+ * 
+ * A React component that visualizes the error landscape of the neural network during training.
+ * Provides a 2D representation of the error surface to help understand optimization progress.
+ * 
+ * Features:
+ * - Real-time error surface visualization
+ * - Current position tracking in weight space
+ * - Gradient descent path visualization
+ * - Interactive error value display
+ * 
+ * Props:
+ * @param {number[][][]} weights - Network weight matrices
+ * @param {number} error - Current error/loss value
+ * 
+ * Visualization Details:
+ * - Surface: Grayscale representation of error values
+ * - Dark regions: High error areas
+ * - Light regions: Low error areas
+ * - Red dot: Current position in weight space
+ * 
+ * Implementation:
+ * - Uses HTML Canvas for efficient rendering
+ * - Maps 3D error surface to 2D visualization
+ * - Updates in real-time during training
+ * - Provides tooltips for interpretation
+ * 
+ * @component
+ */
+
 import { Box, Typography } from '@mui/material';
 import React, { useEffect, useRef } from 'react';
 import { InfoTooltip } from '../controls/InfoTooltip';
@@ -89,4 +120,4 @@ export const ErrorSurfaceViz: React.FC<ErrorSurfaceVizProps> = ({ weights, error
       </Box>
     </Box>
   );
-}; 
+};

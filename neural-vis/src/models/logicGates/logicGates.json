@@ -193,25 +193,25 @@
     },
     {
         "Input 1": "0",
-        "Input 2": "-",
+        "Input 2": "0",
         "Input 3 (Type)": "NOT",
         "Expected Output": "1"
     },
     {
         "Input 1": "1",
-        "Input 2": "-",
+        "Input 2": "1",
         "Input 3 (Type)": "NOT",
         "Expected Output": "0"
     },
     {
         "Input 1": "0",
-        "Input 2": "-",
+        "Input 2": "0",
         "Input 3 (Type)": "BUFFER",
         "Expected Output": "0"
     },
     {
         "Input 1": "1",
-        "Input 2": "-",
+        "Input 2": "1",
         "Input 3 (Type)": "BUFFER",
         "Expected Output": "1"
     }

@@ -1,14 +1,36 @@
+/**
+ * TestingInterface Component
+ * 
+ * A React component that provides an interface for testing trained neural network models
+ * with different types of inputs based on the dataset type.
+ * 
+ * Features:
+ * - Dynamic input controls based on dataset type:
+ *   - Logic Gates: Gate type and input bit selection
+ *   - Fitness Classification: Heart rate, BMI, and stamina inputs
+ *   - Weather Prediction: Temperature, humidity, and cloud cover sliders
+ * - Real-time prediction display
+ * - Input validation and formatting
+ * - Reset functionality
+ * 
+ * Props:
+ * @param {string} dataset - Type of dataset being tested
+ * @param {Object} testInputs - Current test input values
+ * @param {number[]} prediction - Model's prediction output
+ * @param {function} onTestInputChange - Callback for input value changes
+ * @param {function} onTest - Callback to trigger model testing
+ * @param {function} onReset - Callback to reset test inputs
+ * 
+ * Dataset-specific Features:
+ * - Logic Gates: Binary input selection and gate type choice
+ * - Fitness Classification: Categorical input selection
+ * - Weather Prediction: Continuous value sliders with ranges
+ * 
+ * @component
+ */
+
 // src/components/TestingInterface.tsx
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  Slider,
-  Typography
-} from '@mui/material';
+import { Box, Button, FormControl, InputLabel, MenuItem, Select, Slider, Typography } from '@mui/material';
 import React from 'react';
 
 interface TestingInterfaceProps {

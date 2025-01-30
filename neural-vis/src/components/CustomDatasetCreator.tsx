@@ -1,25 +1,55 @@
+/**
+ * CustomDatasetCreator Component
+ * 
+ * A React component that provides an interface for creating custom datasets for neural network training.
+ * Allows users to manually input data points for different types of datasets with validation and preview.
+ * 
+ * Features:
+ * - Dynamic form fields based on dataset type
+ * - Real-time validation of input data
+ * - Support for multiple dataset types:
+ *   - Logic Gates (AND, OR, XOR, etc.)
+ *   - Fitness Classification
+ *   - Weather Prediction
+ * - Row-based data entry with add/delete functionality
+ * - Minimum row requirement enforcement
+ * - Scrollable dialog for large datasets
+ * 
+ * Props:
+ * @param {string} dataset - Type of dataset being created ('logicGates', 'fitnessClassification', 'weatherPrediction')
+ * @param {function} onSaveDataset - Callback function to handle saving the created dataset
+ * @param {number} minimumRows - Minimum number of rows required for the dataset
+ * 
+ * State Management:
+ * - Manages custom data array
+ * - Tracks dialog open/close state
+ * - Handles row addition/deletion
+ * 
+ * @component
+ */
+
 // src/components/CustomDatasetCreator.tsx
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import {
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  MenuItem,
-  Paper,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    MenuItem,
+    Paper,
+    Select,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    TextField,
+    Typography
 } from '@mui/material';
 import React, { useRef, useState } from 'react';
 import { mapBMI, mapHeartRate, mapStamina } from '../models/fitnessClassification/data';

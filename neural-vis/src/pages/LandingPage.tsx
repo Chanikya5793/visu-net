@@ -1,19 +1,49 @@
+/**
+ * LandingPage Component
+ * 
+ * The main entry point of the Neural Network Visualization application.
+ * Provides an engaging introduction and overview of the application's features.
+ * 
+ * Features:
+ * - Animated hero section with gradient background
+ * - Call-to-action button for quick navigation
+ * - Feature cards with interactive animations
+ * - Responsive grid layout
+ * - Material-UI integration
+ * 
+ * Visual Elements:
+ * - Gradient background header
+ * - Animated feature cards
+ * - Interactive hover effects
+ * - Smooth transitions and animations
+ * 
+ * Navigation:
+ * - Direct link to network visualization
+ * - Feature section navigation
+ * 
+ * Animation:
+ * - Uses Framer Motion for card animations
+ * - Material-UI Fade transitions
+ * - Hover effect animations
+ * 
+ * @component
+ */
+
 import { ArrowForward } from '@mui/icons-material';
 import {
-  Box,
-  Button,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  useTheme,
-  Card,
-  CardContent,
-  CardMedia,
-  Fade,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CardMedia,
+    Container,
+    Fade,
+    Grid,
+    Typography,
+    useTheme
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 export default function LandingPage() {
   const theme = useTheme();

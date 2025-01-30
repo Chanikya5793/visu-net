@@ -1,3 +1,35 @@
+/**
+ * TrainingMetrics Component
+ * 
+ * A React component that displays real-time training metrics and progress for neural network training.
+ * Provides visual feedback on training progress, loss, and accuracy.
+ * 
+ * Features:
+ * - Real-time progress bar visualization
+ * - Epoch counter display
+ * - Loss and accuracy metrics
+ * - Collapsible progress view
+ * - Clean Material-UI styling
+ * 
+ * Props:
+ * @param {number} iteration - Current training epoch
+ * @param {number} epochs - Total number of epochs
+ * @param {number} loss - Current loss value
+ * @param {number} accuracy - Current accuracy value (0-1)
+ * @param {boolean} isTraining - Flag indicating if training is in progress
+ * @param {boolean} [showProgress=true] - Optional flag to control progress visibility
+ * @param {function} [onHideProgress] - Optional callback to hide progress display
+ * 
+ * Visual Elements:
+ * - Progress bar with percentage
+ * - Epoch counter (current/total)
+ * - Loss value display
+ * - Accuracy percentage display
+ * - Hide/Show controls
+ * 
+ * @component
+ */
+
 // src/components/TrainingMetrics.tsx
 import { Box, Button, LinearProgress, Typography } from '@mui/material';
 import React from 'react';

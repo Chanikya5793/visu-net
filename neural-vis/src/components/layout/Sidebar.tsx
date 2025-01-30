@@ -1,23 +1,41 @@
+/**
+ * Sidebar Component
+ * 
+ * A responsive sidebar navigation component that provides the main navigation structure
+ * for the application. It includes a persistent drawer that can be toggled on/off.
+ * 
+ * Features:
+ * - Persistent drawer with smooth transitions
+ * - Dynamic menu items with icons
+ * - Responsive layout integration
+ * - Auto-close on navigation (mobile-friendly)
+ * 
+ * Props:
+ * @param {boolean} isOpen - Controls the visibility of the sidebar
+ * @param {() => void} onClose - Callback function to close the sidebar
+ */
+
 import {
-  BubbleChart,
-  Dashboard,
-  Description,
-  Science,
-  Settings as SettingsIcon
+    BubbleChart,
+    Dashboard,
+    Description,
+    Science,
+    Settings as SettingsIcon
 } from '@mui/icons-material';
 import {
-  Box,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  useTheme
+    Box,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Toolbar,
+    useTheme
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
+// Fixed width for the drawer component
 const DRAWER_WIDTH = 240;
 
 interface SidebarProps {
@@ -25,6 +43,7 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+// Navigation menu items configuration
 const menuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/' },
   { text: 'Neural Network', icon: <BubbleChart />, path: '/network' },
@@ -36,6 +55,12 @@ const menuItems = [
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const theme = useTheme();
   const navigate = useNavigate();
+
+  // Handle navigation and sidebar closure
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    onClose();
+  };
 
   return (
     <Drawer
@@ -56,7 +81,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <List>
           {menuItems.map((item) => (
             <ListItem key={item.text} disablePadding>
-              <ListItemButton onClick={() => navigate(item.path)}>
+              <ListItemButton onClick={() => handleNavigation(item.path)}>
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.text} />
               </ListItemButton>

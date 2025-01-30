@@ -1,8 +1,48 @@
-import { Box, Breadcrumbs, Button, Container, Divider, Grid, Link, Paper, Tooltip, Typography } from '@mui/material';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+/**
+ * NetworkPage Component
+ * 
+ * The main workspace for neural network visualization and interaction.
+ * This component orchestrates the entire neural network training, visualization,
+ * and testing experience.
+ * 
+ * Features:
+ * - Dataset selection and management
+ * - Neural network training controls
+ * - Real-time visualization of network architecture
+ * - Performance metrics tracking
+ * - Model testing interface
+ * - Custom dataset support
+ * - Model import/export functionality
+ * 
+ * State Management:
+ * - Training state (epochs, loss, accuracy)
+ * - Network state (weights, biases, activations)
+ * - Dataset configuration
+ * - Testing interface state
+ * - Metrics history
+ * 
+ * Component Integration:
+ * - CustomDatasetCreator - For creating custom training data
+ * - CustomDatasetUploader - For importing external datasets
+ * - DatasetSelector - For choosing predefined datasets
+ * - NeuronViz - Core visualization component
+ * - TrainingControls - Training parameter controls
+ * - TestingInterface - Model testing interface
+ * 
+ * Data Flow:
+ * - Dataset selection → Training configuration → Model training
+ * - Real-time metrics updates during training
+ * - Network state visualization updates
+ * - Testing interface for trained models
+ * 
+ * @component
+ */
+
 import DownloadIcon from '@mui/icons-material/Download';
-import { useState, useRef } from 'react';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import type { SelectChangeEvent } from '@mui/material';
+import { Box, Breadcrumbs, Button, Container, Divider, Grid, Link, Paper, Tooltip, Typography } from '@mui/material';
+import { useRef, useState } from 'react';
 
 // Import components
 import { CustomDatasetCreator } from '../components/CustomDatasetCreator';
@@ -22,21 +62,29 @@ import { fitnessData, mapBMI, mapHeartRate, mapStamina } from '../models/fitness
 import { FitnessTrainer } from '../models/fitnessClassification/train';
 import { logicGateData, mapGateType } from '../models/logicGates/data';
 import { LogicGateTrainer } from '../models/logicGates/train';
+import type { ITrainer } from '../models/TrainerInterface';
 import { weatherData } from '../models/weatherPrediction/data';
 import { WeatherTrainer } from '../models/weatherPrediction/train';
-import type { ITrainer } from '../models/TrainerInterface';
 
 // Import utilities
 import { createModelExport } from '../utils/exportUtils';
 
+/**
+ * Interface for metric data points used in visualization
+ * @interface MetricPoint
+ */
 interface MetricPoint {
   epoch: number;
   loss: number;
   accuracy: number;
 }
 
+/**
+ * NetworkPage Component
+ * Manages the state and interactions for neural network visualization and training
+ */
 export default function NetworkPage() {
-  // Essential state
+  // Essential state management for network training and visualization
   const [dataset, setDataset] = useState<string>('');
   const [epochs, setEpochs] = useState<number>(1000);
   const [isTraining, setIsTraining] = useState<boolean>(false);
@@ -45,22 +93,34 @@ export default function NetworkPage() {
   const [loss, setLoss] = useState<number>(0);
   const [accuracy, setAccuracy] = useState<number>(0);
   const [metricsHistory, setMetricsHistory] = useState<MetricPoint[]>([]);
+  
+  // Testing interface state
   const [testInputs, setTestInputs] = useState<Record<string, any>>({});
   const [prediction, setPrediction] = useState<number[]>([]);
   const [trainingCompleted, setTrainingCompleted] = useState<boolean>(false);
   const [showTestingInterface, setShowTestingInterface] = useState<boolean>(false);
+  
+  // Network state management
   const [networkActivations, setNetworkActivations] = useState<number[][]>([]);
   const [networkWeights, setNetworkWeights] = useState<number[][][]>([]);
   const [networkBiases, setNetworkBiases] = useState<number[][]>([]);
   const [networkGradients, setNetworkGradients] = useState<number[][][]>([]);
+  
+  // Training configuration
   const [learningRate, setLearningRate] = useState(0.01);
   const [trainingSpeed, setTrainingSpeed] = useState(1);
+  
+  // Custom dataset management
   const [customDataset, setCustomDataset] = useState<any[]>([]);
   const [isUsingCustomDataset, setIsUsingCustomDataset] = useState(false);
 
+  // Reference to the current trainer instance
   const trainerRef = useRef<ITrainer | null>(null);
 
-  // Move all handlers from App.tsx
+  // Event handlers and utility functions...
+  // Rest of the implementation remains unchanged
+
+
   const handleChange = (event: SelectChangeEvent<string>) => {
     setDataset(event.target.value as string);
   };

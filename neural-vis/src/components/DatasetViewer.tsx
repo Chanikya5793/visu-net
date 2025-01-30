@@ -1,22 +1,51 @@
 // src/components/DatasetViewer.tsx
-import React from 'react';
-import { 
-  Box, 
-  Button, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
+/**
+ * DatasetViewer Component
+ * 
+ * A React component that provides a tabular view of neural network training datasets.
+ * Supports both default and custom datasets with automatic formatting and display.
+ * 
+ * Features:
+ * - Dataset preview in table format
+ * - Support for multiple dataset types:
+ *   - Logic Gates: Truth table visualization
+ *   - Fitness Classification: Health metrics display
+ *   - Weather Prediction: Environmental data presentation
+ * - Custom dataset support
+ * - Automatic data formatting
+ * - Material-UI table integration
+ * 
+ * Props:
+ * @param {string} dataset - Type of dataset being displayed ('logicGates', 'fitnessClassification', 'weatherPrediction')
+ * @param {any[]} [data] - Optional custom dataset to display instead of default
+ * @param {string} [title] - Optional custom title for the dataset view
+ * 
+ * Data Formatting:
+ * - Logic Gates: Binary inputs and gate type mapping
+ * - Fitness Classification: Health metric categorization
+ * - Weather Prediction: Environmental measurement formatting
+ * 
+ * @component
+ */
+
+import {
+  Box,
+  Button,
+  Dialog,
   DialogActions,
+  DialogContent,
+  DialogTitle,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TableRow,
-  Paper
+  TableRow
 } from '@mui/material';
-import { logicGateData } from '../models/logicGates/data';
+import React from 'react';
 import { fitnessData } from '../models/fitnessClassification/data';
+import { logicGateData } from '../models/logicGates/data';
 import { weatherData } from '../models/weatherPrediction/data';
 
 interface DatasetViewerProps {
@@ -139,11 +168,7 @@ export const DatasetViewer: React.FC<DatasetViewerProps> = ({
 
   return (
     <Box>
-      <Button 
-        variant="outlined" 
-        onClick={() => setOpen(true)}
-        sx={{ mt: 2 }}
-      >
+      <Button variant="outlined" onClick={() => setOpen(true)}>
         View {title}
       </Button>
 

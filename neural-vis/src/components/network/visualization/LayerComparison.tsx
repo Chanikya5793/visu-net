@@ -1,3 +1,35 @@
+/**
+ * LayerComparison Component
+ * 
+ * A React component that visualizes and compares activation patterns across different layers
+ * of the neural network. Helps understand how information flows and transforms through the network.
+ * 
+ * Features:
+ * - Visual comparison of neuron activations across layers
+ * - Interactive bar chart visualization
+ * - Hover tooltips with precise activation values
+ * - Responsive design with horizontal scrolling
+ * - Color-coded activation strength
+ * 
+ * Props:
+ * @param {number[]} layers - Array containing the number of neurons in each layer
+ * @param {number[][]} [activations] - Optional 2D array of activation values for each neuron
+ * 
+ * Visual Elements:
+ * - Bar charts representing neuron activations
+ * - Layer labels and titles
+ * - Tooltips showing exact activation values
+ * - Color intensity indicating activation strength
+ * 
+ * Implementation:
+ * - Uses Material-UI for styling and layout
+ * - Dynamic bar height calculation based on activation values
+ * - Smooth transitions for value changes
+ * - Informative tooltips for data interpretation
+ * 
+ * @component
+ */
+
 import { Box, Typography } from '@mui/material';
 import React from 'react';
 import { InfoTooltip } from '../controls/InfoTooltip';
@@ -66,18 +98,28 @@ export const LayerComparison: React.FC<LayerComparisonProps> = ({
                       borderRadius: '4px 4px 0 0',
                       position: 'relative',
                       '&:hover::after': {
-                        content: `'${value.toFixed(4)}'`,
+                        content: `'${value.toFixed(3)}'`,
                         position: 'absolute',
-                        top: '-24px',
+                        bottom: '100%',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         bgcolor: 'background.paper',
                         color: 'text.primary',
-                        p: '4px 8px',
-                        borderRadius: 1,
                         fontSize: '0.75rem',
-                        whiteSpace: 'nowrap',
+                        padding: '2px 4px',
+                        borderRadius: '2px',
                         boxShadow: 1,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        opacity: 0.9,
+                        textAlign: 'center',
+                        minWidth: '40px',
+                        maxWidth: '80px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        wordWrap: 'break-word',
                         zIndex: 1
                       }
                     }}
@@ -90,4 +132,4 @@ export const LayerComparison: React.FC<LayerComparisonProps> = ({
       </Box>
     </Box>
   );
-}; 
+};

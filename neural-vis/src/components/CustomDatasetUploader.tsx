@@ -1,13 +1,39 @@
+/**
+ * CustomDatasetUploader Component
+ * 
+ * A React component that provides an interface for uploading custom datasets in JSON format.
+ * Handles file validation and data processing for different types of neural network training datasets.
+ * 
+ * Features:
+ * - File upload dialog with drag-and-drop support
+ * - JSON format validation
+ * - Dataset structure validation based on type:
+ *   - Logic Gates: 7 inputs (2 inputs + 5 gate type bits), 1 output
+ *   - Fitness Classification: 3 inputs (heart rate, BMI, stamina), 1 output
+ *   - Weather Prediction: 3 inputs (temperature, humidity, cloud cover), 1 output
+ * - Error handling and user feedback
+ * 
+ * Props:
+ * @param {string} dataset - Type of dataset being uploaded ('logicGates', 'fitnessClassification', 'weatherPrediction')
+ * @param {function} onUploadDataset - Callback function to handle the validated dataset
+ * 
+ * State Management:
+ * - Tracks error state for validation feedback
+ * - Manages dialog visibility
+ * 
+ * @component
+ */
+
 import UploadIcon from '@mui/icons-material/Upload';
 import {
-  Alert,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Typography
+    Alert,
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Typography
 } from '@mui/material';
 import React, { useRef, useState } from 'react';
 
@@ -135,4 +161,4 @@ export const CustomDatasetUploader: React.FC<CustomDatasetUploaderProps> = ({
       </Dialog>
     </Box>
   );
-}; 
+};
