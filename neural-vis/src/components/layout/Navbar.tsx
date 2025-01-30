@@ -6,9 +6,10 @@ import { ColorModeContext } from './Layout';
 interface NavbarProps {
   onMenuClick: () => void;
   isOpen: boolean;
+  menuButtonRef: React.RefObject<HTMLButtonElement>;
 }
 
-export default function Navbar({ onMenuClick, isOpen }: NavbarProps) {
+export default function Navbar({ onMenuClick, isOpen, menuButtonRef }: NavbarProps) {
   const theme = useTheme();
   const colorMode = useContext(ColorModeContext);
 
@@ -28,6 +29,7 @@ export default function Navbar({ onMenuClick, isOpen }: NavbarProps) {
           aria-label="toggle drawer"
           onClick={onMenuClick}
           edge="start"
+          ref={menuButtonRef}
           sx={{ mr: 2 }}
         >
           <Menu />

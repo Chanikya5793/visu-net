@@ -1,8 +1,9 @@
 import { Box, CssBaseline, ThemeProvider, useMediaQuery } from '@mui/material';
-import { createContext, useMemo, useState } from 'react';
+import { createContext, useMemo, useRef, useState } from 'react';
 import { darkTheme, lightTheme } from '../../theme/theme';
 import { Footer } from './Footer';
 import Navbar from './Navbar';
+import OnboardingOverlay from './OnboardingOverlay';
 import Sidebar from './Sidebar';
 
 export const ColorModeContext = createContext({ 
@@ -13,7 +14,8 @@ export const ColorModeContext = createContext({
 export default function Layout({ children }: { children: React.ReactNode }) {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [mode, setMode] = useState<'light' | 'dark'>(prefersDarkMode ? 'dark' : 'light');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   const colorMode = useMemo(
     () => ({
@@ -38,11 +40,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Navbar 
             onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} 
             isOpen={isSidebarOpen}
+            menuButtonRef={menuButtonRef}
           />
           <Sidebar 
             isOpen={isSidebarOpen} 
             onClose={() => setIsSidebarOpen(false)}
           />
+          <OnboardingOverlay anchorEl={menuButtonRef.current} />
           <Box
             component="main"
             sx={{
