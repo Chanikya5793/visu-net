@@ -1,3 +1,34 @@
+/**
+ * Theme Configuration
+ * 
+ * Defines the application's theme settings using Material-UI's createTheme.
+ * Provides both light and dark theme variants with consistent color palettes
+ * and component style overrides.
+ * 
+ * Light Theme:
+ * - Primary: Blue (#2196f3) with light/dark variants
+ * - Secondary: Pink (#ff4081) with light/dark variants
+ * - Background: Light gray (#f5f5f5) with white paper
+ * - Custom component styles for AppBar and Drawer
+ * 
+ * Dark Theme:
+ * - Primary: Light blue (#90caf9) with light/dark variants
+ * - Secondary: Light pink (#f48fb1) with light/dark variants
+ * - Background: Dark gray (#121212) with slightly lighter paper
+ * - Custom component styles for dark mode AppBar and Drawer
+ * 
+ * Component Overrides:
+ * - AppBar: Custom background and text colors
+ * - Drawer: Custom background color and image settings
+ * 
+ * Usage:
+ * Import the desired theme and use with Material-UI's ThemeProvider:
+ * ```tsx
+ * import { lightTheme, darkTheme } from './theme';
+ * <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+ * ```
+ */
+
 import { createTheme } from '@mui/material/styles';
 
 export const lightTheme = createTheme({

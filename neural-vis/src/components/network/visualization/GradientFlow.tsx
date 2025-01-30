@@ -12,6 +12,43 @@ interface GradientFlowProps {
   toActivation: number;
 }
 
+/**
+ * GradientFlow Component
+ * 
+ * A React component that visualizes the flow of gradients through neural network connections
+ * during the training process. Shows how weight updates propagate through the network.
+ * 
+ * Features:
+ * - Real-time gradient visualization
+ * - Color-coded gradient direction and magnitude
+ * - Animated gradient flow effects
+ * - Interactive tooltips with detailed information
+ * 
+ * Props:
+ * @param {number} fromX - Starting X coordinate of the gradient flow
+ * @param {number} fromY - Starting Y coordinate of the gradient flow
+ * @param {number} toX - Ending X coordinate of the gradient flow
+ * @param {number} toY - Ending Y coordinate of the gradient flow
+ * @param {number} gradient - Current gradient value for the connection
+ * @param {number} weight - Current weight value of the connection
+ * @param {number} fromActivation - Activation value of the source neuron
+ * @param {number} toActivation - Activation value of the target neuron
+ * 
+ * Visual Elements:
+ * - Animated gradient paths
+ * - Color-coded gradient magnitude
+ * - Direction indicators
+ * - Interactive tooltips
+ * 
+ * Implementation:
+ * - SVG-based visualization
+ * - Material-UI integration for tooltips
+ * - Dynamic color scaling
+ * - Smooth animations for flow effects
+ * 
+ * @component
+ */
+
 export const GradientFlow: React.FC<GradientFlowProps> = ({
   fromX,
   fromY,
@@ -118,4 +155,4 @@ export const GradientFlow: React.FC<GradientFlowProps> = ({
       </g>
     </Tooltip>
   );
-}; 
+};

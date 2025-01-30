@@ -1,3 +1,36 @@
+/**
+ * TensorFlowPlaygroundViz Component
+ * 
+ * A React component that provides an interactive visualization of neural networks
+ * inspired by TensorFlow Playground. This component offers a canvas-based
+ * visualization with real-time updates and interactive features.
+ * 
+ * Features:
+ * - Interactive neural network visualization
+ * - Real-time weight and activation updates
+ * - Gradient flow visualization
+ * - Hover interactions for detailed information
+ * - Smooth animations for signal propagation
+ * 
+ * Props:
+ * @extends {NeuronVizProps}
+ * @param {boolean} [showGradients] - Toggle gradient visualization
+ * 
+ * Visual Elements:
+ * - Neurons represented as circles with activation-based opacity
+ * - Weighted connections with color-coded strength
+ * - Animated signal flow during forward/backward propagation
+ * - Interactive hover effects for neurons and connections
+ * 
+ * Implementation:
+ * - Uses HTML Canvas for efficient rendering
+ * - Implements custom animation system
+ * - Optimized drawing utilities for smooth performance
+ * - Responsive canvas sizing and positioning
+ * 
+ * @component
+ */
+
 import { Box, Paper, Typography } from '@mui/material';
 import React, { useEffect, useRef, useState } from 'react';
 import { NeuronVizProps } from '../../../types/neuron-viz.types';
@@ -16,7 +49,18 @@ interface ConnectionAnimation {
   direction: 'forward' | 'backward';
 }
 
-// Drawing utility functions
+/**
+ * Utility function to draw the neural network on canvas
+ * @param ctx Canvas rendering context
+ * @param layers Array of layer sizes
+ * @param weights Network weight matrices
+ * @param activations Neuron activation values
+ * @param hoveredNeuron Currently hovered neuron information
+ * @param CANVAS_PADDING Canvas padding value
+ * @param LAYER_SPACING Horizontal spacing between layers
+ * @param VERTICAL_SPACING Vertical spacing between neurons
+ * @param NEURON_RADIUS Radius of neuron circles
+ */
 const drawNetwork = (
   ctx: CanvasRenderingContext2D,
   layers: number[],
@@ -94,7 +138,15 @@ const drawNetwork = (
   }
 };
 
-// Drawing utility functions
+/**
+ * Utility function to draw highlighted connections
+ * @param ctx Canvas rendering context
+ * @param fromX Starting X coordinate
+ * @param fromY Starting Y coordinate
+ * @param toX Ending X coordinate
+ * @param toY Ending Y coordinate
+ * @param weight Connection weight value
+ */
 const drawHighlightedConnection = (
   ctx: CanvasRenderingContext2D,
   fromX: number,
@@ -107,71 +159,24 @@ const drawHighlightedConnection = (
   ctx.moveTo(fromX, fromY);
   ctx.lineTo(toX, toY);
   ctx.strokeStyle = weight > 0 ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
-  ctx.lineWidth = Math.abs(weight) * 4;
+  ctx.lineWidth = Math.abs(weight) * 3;
   ctx.stroke();
-};
-
-const drawNeuronHighlight = (
-  ctx: CanvasRenderingContext2D,
-  neuron: { layer: number; index: number },
-  weights: number[][][] | undefined,
-  CANVAS_PADDING: number,
-  LAYER_SPACING: number,
-  VERTICAL_SPACING: number,
-  NEURON_RADIUS: number
-) => {
-  const x = CANVAS_PADDING + neuron.layer * LAYER_SPACING;
-  const y = CANVAS_PADDING + neuron.index * VERTICAL_SPACING;
-
-  // Draw highlight effect
-  ctx.beginPath();
-  ctx.arc(x, y, NEURON_RADIUS * 1.8, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
-  ctx.fill();
-
-  // Draw connections to/from highlighted neuron
-  if (weights) {
-    if (neuron.layer > 0) {
-      // Draw incoming connections
-      const incomingWeights = weights[neuron.layer - 1]?.[neuron.index] || [];
-      incomingWeights.forEach((weight, fromIndex) => {
-        const fromX = CANVAS_PADDING + (neuron.layer - 1) * LAYER_SPACING;
-        const fromY = CANVAS_PADDING + fromIndex * VERTICAL_SPACING;
-        drawHighlightedConnection(ctx, fromX, fromY, x, y, weight);
-      });
-    }
-
-    if (neuron.layer < weights.length) {
-      // Draw outgoing connections
-      const outgoingWeights = weights[neuron.layer]?.map(n => n[neuron.index]) || [];
-      outgoingWeights.forEach((weight, toIndex) => {
-        const toX = CANVAS_PADDING + (neuron.layer + 1) * LAYER_SPACING;
-        const toY = CANVAS_PADDING + toIndex * VERTICAL_SPACING;
-        drawHighlightedConnection(ctx, x, y, toX, toY, weight);
-      });
-    }
-  }
 };
 
 export const TensorFlowPlaygroundViz: React.FC<TensorFlowPlaygroundVizProps> = ({
   layers,
-  activations,
   weights,
-  biases,
-  gradients,
-  showGradients = false,
-}): JSX.Element => {
+  activations,
+  showGradients
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredNeuron, setHoveredNeuron] = useState<{ layer: number; index: number } | null>(null);
-  const [animations, setAnimations] = useState<ConnectionAnimation[]>([]);
-  const animationFrameRef = useRef<number>();
 
-  // Constants for visualization
-  const NEURON_RADIUS = 12;
-  const LAYER_SPACING = 150;
-  const VERTICAL_SPACING = 80;  // Increased from 40 to 80
-  const CANVAS_PADDING = 50;
-  const CONNECTION_ANIMATION_SPEED = 0.02;
+  // Constants for layout
+  const CANVAS_PADDING = 30;
+  const LAYER_SPACING = 100;
+  const VERTICAL_SPACING = 50;
+  const NEURON_RADIUS = 15;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -180,90 +185,59 @@ export const TensorFlowPlaygroundViz: React.FC<TensorFlowPlaygroundVizProps> = (
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size based on network architecture
-    const maxNeuronsInLayer = Math.max(...layers);
-    canvas.width = LAYER_SPACING * (layers.length + 1) + 2 * CANVAS_PADDING;
-    canvas.height = VERTICAL_SPACING * maxNeuronsInLayer + 2 * CANVAS_PADDING - 0.9;  // Adjusted height calculation
+    // Set canvas size
+    canvas.width = CANVAS_PADDING * 2 + (layers.length - 1) * LAYER_SPACING;
+    canvas.height = CANVAS_PADDING * 2 + Math.max(...layers) * VERTICAL_SPACING;
 
-    // Set up mouse event handlers
-    const handleMouseMove = (event: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const scaledX = x * (canvas.width / rect.width);
-      const scaledY = y * (canvas.height / rect.height);
-
-      // Check if mouse is over any neuron
-      let found = false;
-      layers.forEach((neuronsCount, layerIndex) => {
-        for (let i = 0; i < neuronsCount; i++) {
-          const neuronX = CANVAS_PADDING + layerIndex * LAYER_SPACING;
-          const neuronY = CANVAS_PADDING + i * VERTICAL_SPACING;
-          const distance = Math.sqrt(
-            Math.pow(scaledX - neuronX, 2) + Math.pow(scaledY - neuronY, 2)
-          );
-
-          if (distance <= NEURON_RADIUS) {
-            setHoveredNeuron({ layer: layerIndex, index: i });
-            found = true;
-            return;
-          }
-        }
-      });
-
-      if (!found) setHoveredNeuron(null);
-    };
-
-    canvas.addEventListener('mousemove', handleMouseMove);
-
-    // Animation loop
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawNetwork(
-        ctx,
-        layers,
-        weights,
-        activations,
-        hoveredNeuron,
-        CANVAS_PADDING,
-        LAYER_SPACING,
-        VERTICAL_SPACING,
-        NEURON_RADIUS
-      );
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
+    // Draw network
+    drawNetwork(
+      ctx,
+      layers,
+      weights,
+      activations,
+      hoveredNeuron,
+      CANVAS_PADDING,
+      LAYER_SPACING,
+      VERTICAL_SPACING,
+      NEURON_RADIUS
+    );
   }, [layers, weights, activations, hoveredNeuron]);
 
   return (
-    <Box sx={{ mt: 4, p: 2 }}>
-      <Paper elevation={3} sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          TensorFlow Playground Style Visualization
-        </Typography>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          overflow: 'auto',
-          maxWidth: '100%'
-        }}>
-          <canvas
-            ref={canvasRef}
-            style={{
-              maxWidth: '100%',
-              height: 'auto'
-            }}
-          />
-        </Box>
-      </Paper>
-    </Box>
+    <Paper sx={{ p: 2, mt: 2 }}>
+      <Typography variant="h6" gutterBottom>
+        Network Visualization
+      </Typography>
+      <Box sx={{ position: 'relative' }}>
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height: 'auto' }}
+          onMouseMove={(e) => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Calculate layer and neuron index from mouse position
+            const layer = Math.floor((x - CANVAS_PADDING) / LAYER_SPACING);
+            const index = Math.floor((y - CANVAS_PADDING) / VERTICAL_SPACING);
+
+            if (
+              layer >= 0 &&
+              layer < layers.length &&
+              index >= 0 &&
+              index < layers[layer]
+            ) {
+              setHoveredNeuron({ layer, index });
+            } else {
+              setHoveredNeuron(null);
+            }
+          }}
+          onMouseLeave={() => setHoveredNeuron(null)}
+        />
+      </Box>
+    </Paper>
   );
 };

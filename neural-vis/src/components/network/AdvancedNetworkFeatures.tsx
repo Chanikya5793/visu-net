@@ -1,3 +1,37 @@
+/**
+ * AdvancedNetworkFeatures Component
+ * 
+ * A React component that provides advanced visualization and analysis features for neural networks.
+ * Implements a tabbed interface for different analysis tools and interactive features.
+ * 
+ * Features:
+ * - Architecture comparison between different network configurations
+ * - Training analytics with detailed metrics visualization
+ * - Interactive learning playground for experimentation
+ * - Model explanation tools for understanding network behavior
+ * 
+ * Props:
+ * @param {ITrainer | null} trainer - Neural network trainer instance
+ * @param {string} dataset - Current dataset being used
+ * @param {function} createTrainer - Function to create new trainer instances
+ * @param {number} epochs - Number of training epochs
+ * @param {number[][][]} weights - Network weight matrices
+ * @param {number[][]} activations - Neuron activation values
+ * @param {number[][]} gradients - Network gradients
+ * @param {Object[]} metrics - Training metrics data
+ * @param {number} metrics[].epoch - Training epoch number
+ * @param {number} metrics[].loss - Loss value
+ * @param {number} metrics[].accuracy - Accuracy value
+ * 
+ * Components:
+ * - NetworkComparison: Compare different network architectures
+ * - TrainingAnalytics: Analyze training performance
+ * - LearningPlayground: Interactive learning environment
+ * - ModelExplanation: Network behavior explanation
+ * 
+ * @component
+ */
+
 import { Box, Tab, Tabs } from '@mui/material';
 import React from 'react';
 import { ITrainer } from '../../models/TrainerInterface';
@@ -112,4 +146,4 @@ export const AdvancedNetworkFeatures: React.FC<AdvancedNetworkFeaturesProps> = (
       </TabPanel>
     </Box>
   );
-}; 
+};

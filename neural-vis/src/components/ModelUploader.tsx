@@ -1,13 +1,46 @@
+/**
+ * ModelUploader Component
+ * 
+ * A React component that provides an interface for uploading previously trained neural network models.
+ * Supports both JSON and ZIP file formats with validation and error handling.
+ * 
+ * Features:
+ * - Multiple file format support (JSON/ZIP)
+ * - Model validation and error handling
+ * - Automatic file type detection
+ * - Progress feedback and error display
+ * - Material-UI integration
+ * 
+ * Props:
+ * @param {function} onModelUpload - Callback function to handle validated model data
+ * 
+ * File Format Support:
+ * - JSON: Single file containing model configuration
+ * - ZIP: Archive containing model, dataset, and training info
+ * 
+ * Validation:
+ * - Model structure verification
+ * - Network architecture validation
+ * - Dataset compatibility checking
+ * 
+ * Error Handling:
+ * - Invalid file type detection
+ * - Parsing error feedback
+ * - Structure validation errors
+ * 
+ * @component
+ */
+
 import UploadIcon from '@mui/icons-material/Upload';
 import {
-    Alert,
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Typography
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography
 } from '@mui/material';
 import JSZip from 'jszip';
 import React, { useRef, useState } from 'react';
@@ -101,13 +134,14 @@ export const ModelUploader: React.FC<ModelUploaderProps> = ({ onModelUpload }) =
           <Box component="input"
             type="file"
             accept=".json,.zip"
-            onChange={handleFileUpload}
+            style={{ display: 'none' }}
             ref={fileInputRef}
-            sx={{ display: 'none' }}
+            onChange={handleFileUpload}
           />
           <Button
             variant="contained"
             onClick={() => fileInputRef.current?.click()}
+            startIcon={<UploadIcon />}
           >
             Choose File
           </Button>

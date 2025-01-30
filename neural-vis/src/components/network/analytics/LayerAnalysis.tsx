@@ -12,6 +12,41 @@ interface LayerAnalysisProps {
   biases?: number[][];
 }
 
+/**
+ * LayerAnalysis Component
+ * 
+ * A React component that provides detailed analysis and visualization of individual layers
+ * in the neural network. Shows activation patterns, weight distributions, and layer statistics.
+ * 
+ * Features:
+ * - Layer-specific activation analysis
+ * - Weight distribution visualization
+ * - Statistical metrics calculation
+ * - Interactive data visualization
+ * 
+ * Props:
+ * @param {number} layer - Index of the layer being analyzed
+ * @param {number[]} layers - Array containing neuron counts for each layer
+ * @param {number[][]} [activations] - Optional 2D array of neuron activation values
+ * @param {number[][][]} [weights] - Optional 3D array of weight matrices
+ * @param {number[][][]} [gradients] - Optional 3D array of gradient values
+ * @param {number[][]} [biases] - Optional 2D array of bias values
+ * 
+ * Visualizations:
+ * - Bar charts for activation patterns
+ * - Histograms for weight distributions
+ * - Statistical summaries
+ * - Layer connectivity visualization
+ * 
+ * Implementation:
+ * - Uses Recharts for data visualization
+ * - Material-UI for layout and styling
+ * - Dynamic data processing and analysis
+ * - Responsive design for different screen sizes
+ * 
+ * @component
+ */
+
 export const LayerAnalysis: React.FC<LayerAnalysisProps> = ({
   layer,
   layers,
@@ -171,4 +206,4 @@ export const LayerAnalysis: React.FC<LayerAnalysisProps> = ({
       </Box>
     </Paper>
   );
-}; 
+};

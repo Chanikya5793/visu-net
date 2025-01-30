@@ -1,3 +1,18 @@
+/**
+ * NetworkContent Component
+ * 
+ * A comprehensive interface for neural network visualization and interaction.
+ * Provides tabs for visualization, documentation, experiments, and settings.
+ * 
+ * Features:
+ * - Interactive neural network visualization
+ * - Real-time training controls and metrics
+ * - Dataset selection and configuration
+ * - Detailed documentation and usage guides
+ * - Experiment management interface
+ * - Customizable settings
+ */
+
 import { Box, Tab, Tabs, Typography } from '@mui/material';
 import React, { useState } from 'react';
 import { DatasetSelector } from './DatasetSelector';
@@ -5,12 +20,27 @@ import { NeuronViz } from './NeuronViz';
 import { TrainingControls } from './TrainingControls';
 import { TrainingMetrics } from './TrainingMetrics';
 
+/**
+ * Props interface for TabPanel component
+ * @interface TabPanelProps
+ * @property {React.ReactNode} children - Content to be displayed in the tab panel
+ * @property {number} index - Index of the tab panel
+ * @property {number} value - Current active tab value
+ */
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
 
+/**
+ * TabPanel Component
+ * 
+ * A container component that handles the display of tab content based on the active tab.
+ * Implements accessibility features for better user experience.
+ * 
+ * @param {TabPanelProps} props - The props for the TabPanel component
+ */
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
@@ -31,6 +61,12 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+/**
+ * Generate accessibility props for tabs
+ * 
+ * @param {number} index - The index of the tab
+ * @returns {Object} Object containing aria-label and aria-controls properties
+ */
 function a11yProps(index: number) {
   return {
     id: `network-tab-${index}`,
@@ -38,6 +74,20 @@ function a11yProps(index: number) {
   };
 }
 
+/**
+ * NetworkContent Component
+ * 
+ * Main component for the neural network visualization interface.
+ * Manages the state and interaction between various subcomponents.
+ * 
+ * State:
+ * - tabValue: Current active tab index
+ * - layers: Neural network architecture configuration
+ * - dataset: Selected dataset for training
+ * - isTraining: Training status flag
+ * - learningRate: Network learning rate
+ * - trainingSpeed: Speed of training visualization
+ */
 export function NetworkContent() {
   const [tabValue, setTabValue] = useState(0);
   const [layers, setLayers] = useState([4, 6, 6, 2]);

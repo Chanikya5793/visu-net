@@ -1,3 +1,36 @@
+/**
+ * WeightDistribution Component
+ * 
+ * A React component that visualizes the distribution of weights in the neural network
+ * using a histogram chart. This visualization helps understand the network's learning
+ * patterns and weight adjustments during training.
+ * 
+ * Features:
+ * - Interactive histogram visualization
+ * - Automatic bin calculation for weight ranges
+ * - Responsive chart sizing
+ * - Detailed tooltips with weight and frequency information
+ * - Informative axis labels and titles
+ * 
+ * Props:
+ * @param {number[][][]} weights - 3D array of network weights [layer][toNeuron][fromNeuron]
+ * 
+ * Visual Elements:
+ * - Bar chart showing weight distribution
+ * - X-axis representing weight values
+ * - Y-axis showing frequency of weights
+ * - Interactive tooltips on hover
+ * - Informative header with help tooltip
+ * 
+ * Implementation:
+ * - Uses Recharts for chart rendering
+ * - Material-UI for layout and styling
+ * - Custom tooltip implementation
+ * - Dynamic bin calculation for optimal visualization
+ * 
+ * @component
+ */
+
 import { Box, Paper, Typography } from '@mui/material';
 import React from 'react';
 import {
@@ -92,4 +125,4 @@ export const WeightDistribution: React.FC<WeightDistributionProps> = ({ weights 
       </Box>
     </Paper>
   );
-}; 
+};

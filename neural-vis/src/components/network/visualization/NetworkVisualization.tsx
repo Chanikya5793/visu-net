@@ -2,19 +2,41 @@
  * NetworkVisualization Component
  * 
  * Core visualization component for neural network architecture and dynamics.
- * Focuses on rendering the network structure, connections, and layer statistics.
+ * Provides an interactive visualization of the network structure, connections,
+ * and real-time updates during training.
  * 
- * Note: Performance Metrics and Error Surface components are handled by the parent NeuronViz component
- * to avoid duplication and maintain a single source of truth for these visualizations.
+ * Features:
+ * - Interactive network graph visualization
+ * - Real-time weight and activation updates
+ * - Gradient flow visualization
+ * - Neuron selection and inspection
+ * - Layer-wise statistics display
  * 
- * Components included:
- * 1. Network Graph - Interactive visualization of neurons and connections
- * 2. NetworkStats - Statistics about weights, biases, and learning rate
- * 3. ActivationPatterns - Visualization of neuron activations per layer
- * 4. WeightDistribution - Distribution chart of network weights
+ * Props:
+ * @extends {NeuronVizProps}
+ * @param {boolean} showBackprop - Toggle backpropagation visualization
+ * @param {boolean} showGradients - Toggle gradient visualization
+ * @param {NeuronInfo | null} selectedNeuron - Currently selected neuron for inspection
+ * @param {function} setSelectedNeuron - Callback to update selected neuron
+ * @param {number[][][]} [weights] - Optional 3D array of network weights
+ * @param {number[][]} [activations] - Optional 2D array of neuron activations
+ * @param {number[][]} [biases] - Optional 2D array of neuron biases
+ * @param {number[][][]} [gradients] - Optional 3D array of weight gradients
+ * @param {number} [learningRate] - Optional current learning rate
  * 
- * Note: Performance Metrics and Error Surface components are commented out
- * as they are handled by the parent NeuronViz component.
+ * Visual Components:
+ * - Network Graph - Interactive visualization of neurons and connections
+ * - NetworkStats - Statistics about weights, biases, and learning rate
+ * - ActivationPatterns - Visualization of neuron activations per layer
+ * - WeightDistribution - Distribution chart of network weights
+ * 
+ * Implementation:
+ * - SVG-based network visualization
+ * - Material-UI components for layout and controls
+ * - Dynamic updates during training
+ * - Responsive design with automatic scaling
+ * 
+ * @component
  */
 
 import { Box, Paper, Typography } from '@mui/material';
