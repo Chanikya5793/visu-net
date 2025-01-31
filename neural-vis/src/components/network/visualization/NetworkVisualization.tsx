@@ -132,7 +132,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   const paddingLeft = 40;    // Space from left edge - Reduced to minimize blank space
   // Removed paddingRight since it's not being used
   // const paddingTop = 10;      // Space from top edge - Commented out since not used
-  const paddingBottom = -420;  // Space from bottom edge (more space for labels)
+  const paddingBottom = 10;  // Space from bottom edge (more space for labels)
   
   // =============================================
   // Spacing Calculations - Derived from padding values
@@ -177,7 +177,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   const getLayerLabelPosition = (layerIndex: number) => {
     return {
       x: paddingLeft + layerIndex * layerSpacing,
-      y: height - paddingBottom / 2  // Position labels in bottom padding area
+      y: height - 5  // Fixed distance from bottom of container
     };
   };
 
