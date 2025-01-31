@@ -112,7 +112,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   // =============================================
   
   // Overall SVG dimensions
-  const width = 1200;   // Total width of the visualization
+  // Reduced width from 1200 to 900 to minimize blank space while maintaining readability
+  const width = 900;   // Total width of the visualization
   const height = 600;   // Total height of the visualization
   
   // Neuron appearance - Use settings value
@@ -121,20 +122,26 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   // =============================================
   // Padding Configuration - Adjust these to control exact spacing from edges
   // =============================================
-  
-  // Individual padding for each side (in pixels)
-  const paddingLeft = 100;    // Space from left edge
+  //************************* */
+ // const paddingLeft = 100;    // Space from left edge
   //const paddingRight = 100;   // Space from right edge
  // const paddingTop = 10;      // Space from top edge
-  const paddingBottom = 70;  // Space from bottom edge (more space for labels)
+  //************************ */
+  // Individual padding for each side (in pixels)
+  // Reduced left padding from 100 to 60 to minimize blank space
+  const paddingLeft = 40;    // Space from left edge - Reduced to minimize blank space
+  // Removed paddingRight since it's not being used
+  // const paddingTop = 10;      // Space from top edge - Commented out since not used
+  const paddingBottom = -420;  // Space from bottom edge (more space for labels)
   
   // =============================================
   // Spacing Calculations - Derived from padding values
   // =============================================
   
-  // Horizontal spacing - Use settings value
+//**************** */
+    // Horizontal spacing - Use settings value
   //const usableWidth = width - (paddingLeft + paddingRight);  // Width available for layers
-  const layerSpacing = settingsLayerSpacing;    // Distance between layers
+ // const layerSpacing = settingsLayerSpacing;    // Distance between layers
   //const layerSpacing = Math.min(settingsLayerSpacing, usableWidth / (layers.length - 1));
   // Vertical spacing - Use settings value and usableHeight for dynamic scaling
   //const usableHeight = height - (paddingTop + paddingBottom - 0.9);  // Height available for neurons
@@ -142,6 +149,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
  // const verticalSpacing = Math.min(settingsVerticalSpacing, usableHeight / (maxNeuronsInLayer - 1));
 
   // Use settings value for vertical spacing
+  //************************************ */
+  // Horizontal spacing - Use settings value but with dynamic adjustment
+  // Calculate usable width to ensure proper spacing between layers
+  const usableWidth = width - (paddingLeft * 2);  // Width available for layers
+  // Adjust layer spacing based on available width and number of layers
+  const layerSpacing = Math.min(settingsLayerSpacing, usableWidth / (layers.length - 1));
+  
+  // Use settings value for vertical spacing with dynamic adjustment
   const verticalSpacing = settingsVerticalSpacing;  // Space between neurons
   
   // =============================================

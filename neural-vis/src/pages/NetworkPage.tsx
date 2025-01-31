@@ -247,6 +247,10 @@ export default function NetworkPage() {
           ...mapGateType(testInputs.gateType || 'AND')
         ];
       case 'weatherPrediction':
+        // Normalize weather prediction inputs:
+        // - Temperature is normalized by dividing by 50 (typical range -10 to 40°C)
+        // - Humidity is normalized to 0-1 range by dividing by 100 (0-100%)
+        // - Cloud cover is normalized to 0-1 range by dividing by 100 (0-100%)
         return [
           (testInputs.temperature || 0) / 50,
           (testInputs.humidity || 0) / 100,
