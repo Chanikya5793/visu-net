@@ -72,9 +72,9 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">
-            {layer === 0 ? 'Input' : 
-             layer === (weights?.length || 0) ? 'Output' : 
-             'Hidden'} Neuron {index + 1}
+            {layer === 0 ? 'Input Layer' : 
+             layer === (weights?.length || 0) ? 'Output Layer' : 
+             `Hidden Layer ${layer}`} Neuron ${index + 1}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />

@@ -48,7 +48,7 @@ export const NeuronDetailDialog: React.FC<NeuronDetailDialogProps> = ({
           <Typography variant="h6">
             {layer === 0 ? 'Input' : 
              layer === (weights?.length || 0) ? 'Output' : 
-             'Hidden'} Neuron {index + 1}
+             `Hidden Layer ${layer}`} Neuron ${index + 1}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />

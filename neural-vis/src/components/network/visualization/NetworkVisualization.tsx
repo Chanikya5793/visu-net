@@ -132,7 +132,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   const paddingLeft = 40;    // Space from left edge - Reduced to minimize blank space
   // Removed paddingRight since it's not being used
   // const paddingTop = 10;      // Space from top edge - Commented out since not used
-  const paddingBottom = 10;  // Space from bottom edge (more space for labels)
+  //const paddingBottom = 10;  // Space from bottom edge (more space for labels)
   
   // =============================================
   // Spacing Calculations - Derived from padding values
@@ -181,11 +181,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     };
   };
 
-  const getLayerLabel = (layerIndex: number, totalLayers: number) => {
-    if (layerIndex === 0) return 'Input Layer';
-    if (layerIndex === totalLayers - 1) return 'Output Layer';
-    return `Hidden Layer ${layerIndex}`;
-  };
+
   // =============================================
   // Layer-specific Colors - Edit these to change the color scheme
   // =============================================
@@ -202,7 +198,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     if (layerIndex === totalLayers - 1) return colors.output;
 
     // Improved color assignment for hidden layers
-    const hiddenLayerCount = totalLayers - 2;
+    //const hiddenLayerCount = totalLayers - 2;
     const hiddenLayerIndex = layerIndex - 1;
     
     switch(Math.min(hiddenLayerIndex, 3)) {
