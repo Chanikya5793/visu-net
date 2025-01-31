@@ -33,14 +33,22 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
   const bias = biases?.[layer]?.[index] || 0;
   const activation = value;
   
-  // Calculate incoming and outgoing connections
-  const incomingWeights = layer > 0 ? weights?.[layer - 1]?.[index] || [] : [];
-  const outgoingWeights = layer < (weights?.length || 0) ? weights?.[layer]?.map(n => n[index]) || [] : [];
-  
-  // Calculate gradients if available
-  const incomingGradients = layer > 0 ? gradients?.[layer - 1]?.[index] || [] : [];
-  const outgoingGradients = gradients?.[layer]?.map(n => n[index]) || [];
+  // Fix layer labeling and connection logic
+  const layerLabel = layer === 0 ? 'Input Layer' : 
+                    layer === (weights?.length || 0) - 1 ? 'Output Layer' : 
+                    `Hidden Layer ${layer}`;
 
+  // Calculate incoming and outgoing connections correctly
+  const incomingWeights = layer === 0 ? [] : weights?.[layer - 1]?.[index] || [];
+  const outgoingWeights = weights?.[layer]?.map(n => n[index]) || [];
+  
+  // Calculate gradients with proper layer indexing
+  const incomingGradients = layer === 0 ? [] : gradients?.[layer - 1]?.[index] || [];
+  const outgoingGradients = layer === (weights?.length || 0) - 1 ? [] : gradients?.[layer]?.map(n => n[index]) || [];
+
+  // Update layer position description
+  const layerPosition = `This neuron is in the ${layerLabel.toLowerCase()}, processing information from ${layer === 0 ? 'the input data' : `${incomingWeights.length} previous neurons`} and sending signals to ${layer === (weights?.length || 0) - 1 ? 'the final output' : `${outgoingWeights.length} neurons in the next layer`}.`;
+  
   // Calculate neuron's response to test input
   const calculateResponse = (input: number) => {
     return 1 / (1 + Math.exp(-(input * (incomingWeights[0] || 1) + bias)));

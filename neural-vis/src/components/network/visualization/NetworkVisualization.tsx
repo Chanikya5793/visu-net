@@ -343,7 +343,6 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
           return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
             Array.from({ length: neuronsCount }).map((_, toIdx) => {
-              // Fix weight indexing to properly map between layers
               const weight = weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
               const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
               const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
@@ -366,8 +365,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 const midX = (fromPos.x + toPos.x) / 2;
                 const midY = (fromPos.y + toPos.y) / 2;
                 
-                // Enhanced S-curve for input layer connections
-                const curveFactor = 0.3; // Increased for more pronounced curve
+                const curveFactor = 0.3;
                 const curveHeight = Math.min(Math.abs(dy) * 1.2, 60) * (dy > 0 ? 1 : -1);
                 controlPoint1X = midX - dx * curveFactor;
                 controlPoint1Y = midY - curveHeight;
@@ -386,31 +384,12 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 labelY = fromPos.y + (toPos.y - fromPos.y) * t;
               }
               
-              // TensorFlow Playground-style colors with improved weight representation
-              const connectionColor = isInputLayer
-                ? '#2196f3' // Blue for input connections
-                : weight > 0 
-                  ? `rgba(35, 197, 102, ${0.3 + 0.7 * Math.abs(weight)})` // Green with opacity based on weight
-                  : `rgba(255, 64, 129, ${0.3 + 0.7 * Math.abs(weight)})`; // Pink with opacity based on weight
+              const connectionColor = weight > 0 
+                ? `rgba(35, 197, 102, ${0.3 + 0.7 * Math.abs(weight)})` // Green
+                : `rgba(255, 64, 129, ${0.3 + 0.7 * Math.abs(weight)})`; // Pink
               
               return (
-                <g 
-                  key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}
-                  onMouseEnter={() => {
-                    // Highlight connected neurons and show weight value
-                    const fromNeuron = document.querySelector(`#neuron-${layerIndex-1}-${fromIdx}`);
-                    const toNeuron = document.querySelector(`#neuron-${layerIndex}-${toIdx}`);
-                    if (fromNeuron) fromNeuron.setAttribute('filter', 'url(#neuron-highlight)');
-                    if (toNeuron) toNeuron.setAttribute('filter', 'url(#neuron-highlight)');
-                  }}
-                  onMouseLeave={() => {
-                    // Remove highlight
-                    const fromNeuron = document.querySelector(`#neuron-${layerIndex-1}-${fromIdx}`);
-                    const toNeuron = document.querySelector(`#neuron-${layerIndex}-${toIdx}`);
-                    if (fromNeuron) fromNeuron.removeAttribute('filter');
-                    if (toNeuron) toNeuron.removeAttribute('filter');
-                  }}
-                >
+                <g key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}>
                   <defs>
                     <filter id={`glow-${layerIndex}-${fromIdx}-${toIdx}`}>
                       <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
@@ -424,18 +403,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                       <stop offset="50%" stopColor={connectionColor} stopOpacity="0.6"/>
                       <stop offset="100%" stopColor={connectionColor} stopOpacity="0.3"/>
                     </linearGradient>
-                    <filter id="neuron-highlight">
-                      <feGaussianBlur stdDeviation="3" result="blur"/>
-                      <feFlood floodColor="#ffeb3b" floodOpacity="0.5"/>
-                      <feComposite in2="blur" operator="in"/>
-                      <feMerge>
-                        <feMergeNode/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
                   </defs>
                   
-                  {/* Base connection path */}
                   <path
                     d={path}
                     fill="none"
@@ -444,7 +413,6 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                     opacity={connectionOpacity * 0.3}
                   />
                   
-                  {/* Animated connection path */}
                   <path
                     d={path}
                     fill="none"
@@ -467,7 +435,6 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                     />
                   </path>
                   
-                  {/* Flowing particles */}
                   {isActive && (
                     <>
                       <circle r="3" fill={connectionColor}>
@@ -476,9 +443,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                           repeatCount="indefinite"
                           begin={`${(fromIdx + toIdx) * 0.1}s`}
                           path={path}
-                        >
-                          <mpath href={`#path-${layerIndex}-${fromIdx}-${toIdx}`} />
-                        </animateMotion>
+                        />
                         <animate
                           attributeName="opacity"
                           values="0.8;0.4;0.8"
@@ -504,16 +469,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                     </>
                   )}
                   
-                  {!isInputLayer && (
-                    <ConnectionLabel
-                      weight={Number(weight.toFixed(2))}
-                      fromActivation={Number(fromActivation.toFixed(2))}
-                      toActivation={Number(toActivation.toFixed(2))}
-                      x={labelX}
-                      y={labelY}
-                      isInputLayer={isInputLayer}
-                    />
-                  )}
+                  <ConnectionLabel
+                    weight={Number(weight.toFixed(2))}
+                    fromActivation={Number(fromActivation.toFixed(2))}
+                    toActivation={Number(toActivation.toFixed(2))}
+                    x={labelX}
+                    y={labelY}
+                    isInputLayer={isInputLayer}
+                  />
                 </g>
               );
             })
