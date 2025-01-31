@@ -88,8 +88,8 @@ export class LogicGateTrainer implements ITrainer {
     const layerSize = layers?.[0] || 3;
     
     this.network = new brain.NeuralNetwork({
-      hiddenLayers: layers || [3],
-      activation: 'sigmoid',  // Changed to sigmoid for better initial gradient flow
+      hiddenLayers: layers || [8, 4],  // Increased network capacity for complex logic gates
+      activation: 'sigmoid',
       learningRate: this.learningRate
     });
 

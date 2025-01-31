@@ -181,6 +181,11 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     };
   };
 
+  const getLayerLabel = (layerIndex: number, totalLayers: number) => {
+    if (layerIndex === 0) return 'Input Layer';
+    if (layerIndex === totalLayers - 1) return 'Output Layer';
+    return `Hidden Layer ${layerIndex}`;
+  };
   // =============================================
   // Layer-specific Colors - Edit these to change the color scheme
   // =============================================
@@ -196,10 +201,14 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     if (layerIndex === 0) return colors.input;
     if (layerIndex === totalLayers - 1) return colors.output;
 
-    switch(layerIndex) {
-      case 1: return colors.hidden1;
-      case 2: return colors.hidden2;
-      case 3: return colors.hidden3;
+    // Improved color assignment for hidden layers
+    const hiddenLayerCount = totalLayers - 2;
+    const hiddenLayerIndex = layerIndex - 1;
+    
+    switch(Math.min(hiddenLayerIndex, 3)) {
+      case 0: return colors.hidden1;
+      case 1: return colors.hidden2;
+      case 2: return colors.hidden3;
       default: return colors.hidden1;
     }
   };
@@ -268,21 +277,22 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     weight: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Enhanced connection strength calculation
-    const baseStrength = Math.abs(weight);
-    const activationFactor = isInputLayer ? 1 : Math.abs(fromActivation);
-    return baseStrength * (0.3 + 0.7 * activationFactor); // Ensure minimum visibility
+    // Normalize weight to a reasonable range (-1 to 1)
+    const normalizedWeight = Math.tanh(weight);
+    // Scale activation influence based on layer type
+    const activationFactor = isInputLayer ? Math.abs(fromActivation) : (Math.abs(fromActivation) + Math.abs(toActivation)) / 2;
+    // Combine weight and activation with proper scaling
+    return Math.abs(normalizedWeight) * (0.3 + 0.7 * activationFactor);
   };
 
-  // Update connection opacity to use settings value
   const getConnectionOpacity = (
     layerIndex: number,
     connectionStrength: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Higher base opacity for input layer, modified by settings
-    const baseOpacity = (isInputLayer ? 0.8 : 0.5) * connectionOpacity;
-    return baseOpacity + Math.min(connectionStrength, 1) * 0.2;
+    // Ensure minimum visibility while maintaining contrast
+    const minOpacity = isInputLayer ? 0.5 : 0.4;
+    return minOpacity + (1 - minOpacity) * connectionStrength * connectionOpacity;
   };
 
   const getConnectionWidth = (
@@ -290,9 +300,10 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     weight: number
   ) => {
     const isInputLayer = layerIndex === 1;
-    // Simplified width calculation
-    const baseWidth = isInputLayer ? 2 : 1;
-    return Math.max(baseWidth, Math.abs(weight) * 3);
+    const normalizedWeight = Math.tanh(weight);
+    // Scale width more proportionally to weight magnitude
+    const baseWidth = isInputLayer ? 2.5 : 2;
+    return baseWidth * (1 + Math.abs(normalizedWeight));
   };
 
   const getActivityThreshold = (layerIndex: number) => {
@@ -336,6 +347,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
           return Array.from({ length: prevLayerNeurons }).map((_, fromIdx) =>
             Array.from({ length: neuronsCount }).map((_, toIdx) => {
+              // Fix weight indexing to properly map between layers
               const weight = weights?.[layerIndex - 1]?.[toIdx]?.[fromIdx] || 0;
               const fromActivation = activations?.[layerIndex - 1]?.[fromIdx] || 0;
               const toActivation = activations?.[layerIndex]?.[toIdx] || 0;
@@ -378,16 +390,18 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 labelY = fromPos.y + (toPos.y - fromPos.y) * t;
               }
               
-              // TensorFlow Playground-style colors
+              // TensorFlow Playground-style colors with improved weight representation
               const connectionColor = isInputLayer
-                ? '#2196f3' // Consistent blue for input connections
-                : weight > 0 ? '#23c566' : '#ff4081'; // Green for positive, pink for negative
+                ? '#2196f3' // Blue for input connections
+                : weight > 0 
+                  ? `rgba(35, 197, 102, ${0.3 + 0.7 * Math.abs(weight)})` // Green with opacity based on weight
+                  : `rgba(255, 64, 129, ${0.3 + 0.7 * Math.abs(weight)})`; // Pink with opacity based on weight
               
               return (
                 <g 
                   key={`connection-${layerIndex}-${fromIdx}-${toIdx}`}
                   onMouseEnter={() => {
-                    // Highlight connected neurons
+                    // Highlight connected neurons and show weight value
                     const fromNeuron = document.querySelector(`#neuron-${layerIndex-1}-${fromIdx}`);
                     const toNeuron = document.querySelector(`#neuron-${layerIndex}-${toIdx}`);
                     if (fromNeuron) fromNeuron.setAttribute('filter', 'url(#neuron-highlight)');

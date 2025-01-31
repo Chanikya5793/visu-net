@@ -179,9 +179,12 @@ export default function NetworkPage() {
     setMetricsHistory(prev => [...prev, { epoch: iter, loss: err, accuracy: 1 - err }]);
     
     if (trainerRef.current) {
+      const networkState = trainerRef.current.getNetwork().toJSON();
+      const networkLayers = [networkState.sizes[0], ...networkState.layers.map((l: { weights: any[] }) => l.weights.length)];
       setNetworkActivations(trainerRef.current.getActivations());
       setNetworkWeights(trainerRef.current.getWeights());
       setNetworkBiases(trainerRef.current.getBiases());
+      setNetworkGradients(trainerRef.current.getGradients());
     }
   };
 
@@ -280,7 +283,7 @@ export default function NetworkPage() {
   const getNetworkArchitecture = (selectedDataset: string): number[] => {
     switch(selectedDataset) {
       case 'logicGates':
-        return [10, 3, 2];
+        return [10, 8, 4, 2];
       case 'fitnessClassification':
         return [3, 4, 4, 3];
       case 'weatherPrediction':

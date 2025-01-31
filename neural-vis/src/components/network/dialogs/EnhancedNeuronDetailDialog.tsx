@@ -34,8 +34,8 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
   const activation = value;
   
   // Calculate incoming and outgoing connections
-  const incomingWeights = layer > 0 ? weights?.[layer - 1]?.map(n => n[index]) || [] : [];
-  const outgoingWeights = weights?.[layer]?.[index] || [];
+  const incomingWeights = layer > 0 ? weights?.[layer - 1]?.[index] || [] : [];
+  const outgoingWeights = layer < (weights?.length || 0) ? weights?.[layer]?.map(n => n[index]) || [] : [];
   
   // Calculate gradients if available
   const incomingGradients = layer > 0 ? gradients?.[layer - 1]?.[index] || [] : [];
@@ -129,15 +129,16 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
                 <Typography variant="body2" gutterBottom>Incoming Weights</Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   {incomingWeights.map((weight, idx) => {
-                    const weightValue = weight || 0; // Provide default value if weight is undefined
+                    const weightValue = weight || 0;
+                    const normalizedWeight = Math.tanh(weightValue); // Normalize to -1 to 1 range
                     return (
                       <Tooltip key={idx} title={`Weight from neuron ${idx}: ${weightValue.toFixed(4)}`}>
                         <Box
                           sx={{
                             width: 20,
                             height: 60,
-                            bgcolor: weightValue > 0 ? 'success.main' : 'error.main',
-                            opacity: Math.abs(weightValue),
+                            bgcolor: weightValue > 0 ? 'rgba(35, 197, 102, 0.9)' : 'rgba(255, 64, 129, 0.9)',
+                            opacity: 0.3 + 0.7 * Math.abs(normalizedWeight),
                             borderRadius: 1
                           }}
                         />
@@ -150,15 +151,16 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
                 <Typography variant="body2" gutterBottom>Outgoing Weights</Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   {outgoingWeights.map((weight, idx) => {
-                    const weightValue = weight || 0; // Provide default value if weight is undefined
+                    const weightValue = weight || 0;
+                    const normalizedWeight = Math.tanh(weightValue); // Normalize to -1 to 1 range
                     return (
                       <Tooltip key={idx} title={`Weight to neuron ${idx}: ${weightValue.toFixed(4)}`}>
                         <Box
                           sx={{
                             width: 20,
                             height: 60,
-                            bgcolor: weightValue > 0 ? 'success.main' : 'error.main',
-                            opacity: Math.abs(weightValue),
+                            bgcolor: weightValue > 0 ? 'rgba(35, 197, 102, 0.9)' : 'rgba(255, 64, 129, 0.9)',
+                            opacity: 0.3 + 0.7 * Math.abs(normalizedWeight),
                             borderRadius: 1
                           }}
                         />
