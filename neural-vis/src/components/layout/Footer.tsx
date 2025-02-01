@@ -1,4 +1,7 @@
 import { Box, Container, Grid, Link, Typography } from '@mui/material';
+import Documentation from './components/network/documentation/Documentation';
+import Experiments from './components/network/experiments/Experiments';
+import Settings from './components/network/settings/Settings';
 
 export function Footer() {
   return (
@@ -35,7 +38,7 @@ export function Footer() {
             <Typography variant="h6" color="text.primary" gutterBottom>
               Contact
             </Typography>
-            <Link href="https://github.com/yourusername/neural-vis" color="text.secondary" display="block">
+            <Link href="https://github.com/chanikya5793/" color="text.secondary" display="block">
               GitHub Repository
             </Link>
             <Typography variant="body2" color="text.secondary">

@@ -293,7 +293,7 @@ export class WeatherTrainer implements ITrainer {
 
     this.network.train([dummyData], {
       iterations: 1,
-      errorThresh: 0.01,
+      errorThresh: 0.000000000000000000001,
       log: false
     });
 

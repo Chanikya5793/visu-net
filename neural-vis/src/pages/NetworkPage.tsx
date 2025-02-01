@@ -285,9 +285,9 @@ export default function NetworkPage() {
       case 'logicGates':
         return [10, 8, 4, 2];
       case 'fitnessClassification':
-        return [3, 4, 4, 3];
+        return [3, 3, 4, 3];
       case 'weatherPrediction':
-        return [3, 6, 4, 1];
+        return [3, 3, 4, 1];
       default:
         return [];
     }
