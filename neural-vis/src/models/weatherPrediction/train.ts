@@ -23,6 +23,7 @@ export class WeatherTrainer implements ITrainer {
   private learningRate: number = 0.01;
   private trainingData: TrainingData[];
   private gradientNorm: number = 0;
+  private stoppedTriggered: boolean = false; // NEW flag
 
   constructor(customDataset?: any[]) {
     this.trainingData = customDataset || weatherData.training;
@@ -154,6 +155,7 @@ export class WeatherTrainer implements ITrainer {
     this.isTraining = false;
     this.isPaused = false;
     this.trainingState = null;
+    this.stoppedTriggered = true; // mark that stop has been triggered
   }
 
   reset(): void {
@@ -163,6 +165,7 @@ export class WeatherTrainer implements ITrainer {
     this.lastError = 1;
     this.isTraining = false;
     this.isPaused = false;
+    this.stoppedTriggered = false; // reset flag
     this.initNetwork();
   }
 
@@ -203,11 +206,16 @@ export class WeatherTrainer implements ITrainer {
         learningRate: this.learningRate,
         batchSize: options.batchSize,
         callback: (stats: { iterations: number; error: number }) => {
+          if (this.stoppedTriggered) return true; // if stop already triggered, exit
+
           this.currentEpoch = stats.iterations;
           this.lastError = stats.error;
 
           if (!this.isTraining) {
-            options.onStop?.();
+            if (!this.stoppedTriggered) { 
+              options.onStop?.();
+              this.stoppedTriggered = true;
+            }
             return true;
           }
 
@@ -236,17 +244,19 @@ export class WeatherTrainer implements ITrainer {
           // Validate on validation set
           const validationError = this.validateOnSet(validationSet);
           
-          // Early stopping check
+          // Early stopping check — only stop if the best error isn’t already nearly 0
           if (validationError < bestError) {
             bestError = validationError;
             patienceCounter = 0;
             this.trainingState = this.network.toJSON(); // Save best model
           } else {
             patienceCounter++;
-            if (patienceCounter >= patience) {
-              this.network.fromJSON(this.trainingState); // Restore best model
-              this.isTraining = false;
-              options.onComplete?.();
+            // Only trigger early stopping if the best error is significantly above 0
+            if (patienceCounter >= patience && bestError > 1e-10) {
+              if (!this.stoppedTriggered) {
+                options.onStop?.('Early stopping triggered: No improvement in validation error');
+                this.stoppedTriggered = true;
+              }
               return true;
             }
           }

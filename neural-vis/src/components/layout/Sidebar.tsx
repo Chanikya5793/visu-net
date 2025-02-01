@@ -33,7 +33,7 @@ import {
     Toolbar,
     useTheme
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // Fixed width for the drawer component
 const DRAWER_WIDTH = 240;
@@ -55,9 +55,17 @@ const menuItems = [
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation(); // get current route
 
   // Handle navigation and sidebar closure
   const handleNavigation = (path: string) => {
+    // If current page is training and training is in progress, ask for confirmation
+    if (location.pathname === '/network' && localStorage.getItem('isTraining') === 'true') {
+      const confirmed = window.confirm("Training is in progress and will be reset if you navigate away. Do you want to continue?");
+      if (!confirmed) return;
+      // Optionally clear training flag if confirmed
+      localStorage.setItem('isTraining', 'false');
+    }
     navigate(path);
     onClose();
   };

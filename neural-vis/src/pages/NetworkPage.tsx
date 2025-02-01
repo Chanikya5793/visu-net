@@ -41,7 +41,7 @@
 import DownloadIcon from '@mui/icons-material/Download';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import type { SelectChangeEvent } from '@mui/material';
-import { Box, Breadcrumbs, Button, Container, Divider, Grid, Link, Paper, Tooltip, Typography } from '@mui/material';
+import { Box, Breadcrumbs, Button, Container, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Divider, Grid, Link, Paper, Tooltip, Typography } from '@mui/material';
 import { useRef, useState } from 'react';
 
 // Import components
@@ -56,6 +56,7 @@ import { TestingInterface } from '../components/TestingInterface';
 import { TestModelButton } from '../components/TestModelButton';
 import { TrainingControls } from '../components/TrainingControls';
 import { TrainingMetrics } from '../components/TrainingMetrics';
+import { TrainingStoppedDialog } from '../components/TrainingStoppedDialog';
 
 // Import models and data
 import { fitnessData, mapBMI, mapHeartRate, mapStamina } from '../models/fitnessClassification/data';
@@ -117,9 +118,8 @@ export default function NetworkPage() {
   // Reference to the current trainer instance
   const trainerRef = useRef<ITrainer | null>(null);
 
-  // Event handlers and utility functions...
-  // Rest of the implementation remains unchanged
-
+  const [stopReason, setStopReason] = useState('');
+  const [stopDialogOpen, setStopDialogOpen] = useState(false);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     setDataset(event.target.value as string);
@@ -136,6 +136,7 @@ export default function NetworkPage() {
     if (!trainerRef.current) return;
 
     resetTrainingState();
+    localStorage.setItem('isTraining', 'true'); // mark training active
     await startTraining();
   };
 
@@ -160,6 +161,7 @@ export default function NetworkPage() {
     setAccuracy(0);
     setMetricsHistory([]);
     setTrainingCompleted(false);
+    localStorage.setItem('isTraining', 'false'); // clear training flag on reset
   };
 
   const startTraining = async () => {
@@ -192,6 +194,7 @@ export default function NetworkPage() {
     setIsTraining(false);
     setIsPaused(false);
     setTrainingCompleted(true);
+    finishTraining();
   };
 
   const handlePause = () => {
@@ -199,11 +202,22 @@ export default function NetworkPage() {
     setIsTraining(false);
   };
 
-  const handleStop = () => {
-    trainerRef.current?.stop();
-    setIsTraining(false);
-    setIsPaused(false);
-    setTrainingCompleted(false);
+  const handleStop = (reason?: string) => {
+    if (stopDialogOpen) return; // Avoid multiple dialog triggers
+    if (trainerRef.current) {
+      trainerRef.current.stop();
+      setIsTraining(false);
+      setIsPaused(false);
+      setTrainingCompleted(false);
+    }
+    // Use trainerRef.getProgress() to fetch current epoch if available.
+    const currentIter = trainerRef.current ? trainerRef.current.getProgress().currentEpoch : iteration;
+    setStopReason(`${reason || 'Unknown reason'}. Training stopped at iteration ${currentIter}.`);
+    setStopDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setStopDialogOpen(false);
   };
 
   const handleReset = () => {
@@ -467,6 +481,12 @@ export default function NetworkPage() {
     }
   };
 
+  const finishTraining = () => {
+    localStorage.setItem('isTraining', 'false');
+    setTrainingCompleted(true);
+    setStopDialogOpen(true);
+  };
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ mb: 4 }}>
@@ -653,6 +673,20 @@ export default function NetworkPage() {
           </>
         )}
       </Box>
+      <TrainingStoppedDialog open={stopDialogOpen} reason={stopReason} onClose={handleCloseDialog} />
+      {stopDialogOpen && (
+        <Dialog open={stopDialogOpen} onClose={() => setStopDialogOpen(false)}>
+          <DialogTitle>Training Completed</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Training is finished. You can now test the model.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setStopDialogOpen(false)}>OK</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Container>
   );
 }

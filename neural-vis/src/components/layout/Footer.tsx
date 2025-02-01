@@ -1,7 +1,4 @@
 import { Box, Container, Grid, Link, Typography } from '@mui/material';
-import Documentation from './components/network/documentation/Documentation';
-import Experiments from './components/network/experiments/Experiments';
-import Settings from './components/network/settings/Settings';
 
 export function Footer() {
   return (

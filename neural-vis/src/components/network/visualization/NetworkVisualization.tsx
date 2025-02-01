@@ -69,6 +69,7 @@ interface NetworkVisualizationProps extends NeuronVizProps {
     recall: number;
     f1Score: number;
   };
+  dataset: string; // Add dataset here
 }
 
 export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
@@ -82,7 +83,8 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   setSelectedNeuron,
   gradients,
   learningRate,
-  performanceMetrics
+  performanceMetrics,
+  dataset
 }) => {
 // Remove unused theme import since it's not being used
   const svgRef = useRef<SVGSVGElement>(null);
@@ -629,19 +631,28 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
                 strokeWidth={1.5}
                 filter={isActive ? `url(#neuron-glow-${layerIndex}-${neuronIndex})` : ''}
                 onClick={() => {
+                  // For logicGates and fitness models, input neurons (layer 0) have their connection weights stored at weights[0]
+                  const neuronWeights =
+                    (dataset === 'logicGates' || dataset === 'fitnessClassification')
+                      ? (layerIndex === 0
+                          ? (weights?.[0]?.[neuronIndex] || [])
+                          : (weights?.[layerIndex - 1]?.[neuronIndex] || []))
+                      : (weights?.[layerIndex - 1]?.[neuronIndex] || []);
+            
                   setSelectedNeuron({ 
-                    layer: layerIndex, 
-                    index: neuronIndex, 
+                    layer: layerIndex,
+                    index: neuronIndex,
                     value: activation,
-                    weights: weights?.[layerIndex]?.[neuronIndex] || [],
+                    weights: neuronWeights,
                     bias: bias,
                     gradient: gradient,
                     connections: {
-                      incoming: weights?.[layerIndex - 1]?.map(w => w[neuronIndex]) || [],
+                      incoming: (dataset === 'logicGates' || dataset === 'fitnessClassification') && layerIndex === 0
+                                  ? (weights?.[0]?.map(col => col[neuronIndex]) || [])
+                                  : (weights?.[layerIndex - 1]?.[neuronIndex] || []),
                       outgoing: weights?.[layerIndex]?.[neuronIndex] || []
                     }
                   });
-                  setShowNeuronDetail(true);
                 }}
                 onMouseEnter={(e) => {
                   const tooltip = document.createElement('div');
