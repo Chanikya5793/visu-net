@@ -12,6 +12,7 @@ interface EnhancedNeuronDetailDialogProps {
   biases?: number[][];
   activations?: number[][];
   gradients?: number[][][];
+  dataset?: string; // NEW optional prop to distinguish weather prediction
 }
 
 export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProps> = ({
@@ -21,7 +22,8 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
   weights,
   biases,
   activations,
-  gradients
+  gradients,
+  dataset
 }) => {
   // State for interactive features - moved before conditional return
   const [selectedTab, setSelectedTab] = useState('overview');
@@ -29,25 +31,63 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
 
   if (!neuron) return null;
 
-  const { layer, index, value } = neuron;
-  const bias = biases?.[layer]?.[index] || 0;
-  const activation = value;
-  
-  // Fix layer labeling and connection logic
-  const layerLabel = layer === 0 ? 'Input Layer' : 
-                    layer === (weights?.length || 0) - 1 ? 'Output Layer' : 
-                    `Hidden Layer ${layer}`;
+  const { layer, index } = neuron;
+  const totalLayers = (weights?.length || 0) + 1;
 
-  // Calculate incoming and outgoing connections correctly
-  const incomingWeights = layer === 0 ? [] : weights?.[layer - 1]?.[index] || [];
-  const outgoingWeights = weights?.[layer]?.map(n => n[index]) || [];
-  
-  // Calculate gradients with proper layer indexing
-  const incomingGradients = layer === 0 ? [] : gradients?.[layer - 1]?.[index] || [];
-  const outgoingGradients = layer === (weights?.length || 0) - 1 ? [] : gradients?.[layer]?.map(n => n[index]) || [];
+  // Override activation: for weatherPrediction output neuron, force index 0.
+  const activation =
+    dataset === 'weatherPrediction' && layer === totalLayers - 1
+      ? activations?.[layer]?.[0] ?? 0
+      : activations?.[layer]?.[index] ?? 0;
+  const bias = biases?.[layer]?.[index] ?? 0;
+
+  let incomingWeights: number[] = [];
+  let outgoingWeights: number[] = [];
+  let incomingGradients: number[] = [];
+  let outgoingGradients: number[] = [];
+
+  if (dataset === 'weatherPrediction') {
+    if (layer === 0) { // Input Layer (3 neurons)
+      incomingWeights = [];
+      // FIX: Outgoing weights should be extracted by mapping over weights[0]
+      outgoingWeights = weights?.[0]?.map(row => row[index]) || [];
+      incomingGradients = [];
+      outgoingGradients = gradients?.[0]?.map(row => row[index]) || [];
+    } else if (layer === 1) { // Hidden Layer 1 (3 neurons)
+      // Ensure incoming weights/gradients come from input layer
+      incomingWeights = weights?.[0]?.map(row => row[index]) || [];
+      outgoingWeights = weights?.[1]?.map(row => row[index]) || [];
+      incomingGradients = gradients?.[0]?.map(row => row[index]) || [];
+      outgoingGradients = gradients?.[1]?.map(row => row[index]) || [];
+    } else if (layer === 2) { // Hidden Layer 2 (4 neurons)
+      incomingWeights = weights?.[1]?.[index] || [];
+      outgoingWeights = weights?.[2]?.map(row => row[index]) || [];
+      incomingGradients = gradients?.[1]?.[index] || [];
+      outgoingGradients = gradients?.[2]?.map(row => row[index]) || [];
+    } else if (layer === (weights?.length || 0)) { // Output Layer (Layer 3: 1 neuron)
+      incomingWeights = weights?.[2]?.[0] || [];
+      outgoingWeights = [];
+      incomingGradients = gradients?.[2]?.[0] || [];
+      outgoingGradients = [];
+    }
+  } else {
+    incomingWeights = layer === 0 ? [] : (weights?.[layer - 1]?.[index] || []);
+    outgoingWeights =
+      layer === (weights?.length || 0) ? [] : (weights?.[layer]?.map(n => n[index]) || []);
+    incomingGradients = layer === 0 ? [] : (gradients?.[layer - 1]?.[index] || []);
+    outgoingGradients = layer === (weights?.length || 0) ? [] : (gradients?.[layer]?.map(n => n[index]) || []);
+  }
+
+  const isInputLayer = layer === 0;
+  const isOutputLayer = layer === totalLayers - 1;
+  const layerLabel = isInputLayer 
+    ? 'Input Layer' 
+    : isOutputLayer 
+      ? 'Output Layer' 
+      : `Hidden Layer ${layer}`;
 
   // Update layer position description
-  const layerPosition = `This neuron is in the ${layerLabel.toLowerCase()}, processing information from ${layer === 0 ? 'the input data' : `${incomingWeights.length} previous neurons`} and sending signals to ${layer === (weights?.length || 0) - 1 ? 'the final output' : `${outgoingWeights.length} neurons in the next layer`}.`;
+  const layerPosition = `This neuron is in the ${layerLabel.toLowerCase()}, processing information from ${isInputLayer ? 'the input data' : `${incomingWeights.length} previous neurons`} and sending signals to ${isOutputLayer ? 'the final output' : `${outgoingWeights.length} neurons in the next layer`}.`;
   
   // Calculate neuron's response to test input
   const calculateResponse = (input: number) => {
@@ -80,9 +120,7 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
       <DialogTitle>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">
-            {layer === 0 ? 'Input Layer' : 
-             layer === (weights?.length || 0) ? 'Output Layer' : 
-             `Hidden Layer ${layer}`} Neuron ${index + 1}
+            {layerLabel} Neuron {index + 1}
           </Typography>
           <IconButton onClick={onClose} size="small">
             <CloseIcon />
@@ -139,6 +177,8 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
                   {incomingWeights.map((weight, idx) => {
                     const weightValue = weight || 0;
                     const normalizedWeight = Math.tanh(weightValue); // Normalize to -1 to 1 range
+                    // Increase minimum opacity for weatherPrediction hidden layer 1 neurons
+                    const baseOpacity = dataset === 'weatherPrediction' && neuron.layer === 1 ? 0.5 : 0.3;
                     return (
                       <Tooltip key={idx} title={`Weight from neuron ${idx}: ${weightValue.toFixed(4)}`}>
                         <Box
@@ -146,7 +186,7 @@ export const EnhancedNeuronDetailDialog: React.FC<EnhancedNeuronDetailDialogProp
                             width: 20,
                             height: 60,
                             bgcolor: weightValue > 0 ? 'rgba(35, 197, 102, 0.9)' : 'rgba(255, 64, 129, 0.9)',
-                            opacity: 0.3 + 0.7 * Math.abs(normalizedWeight),
+                            opacity: baseOpacity + 0.7 * Math.abs(normalizedWeight),
                             borderRadius: 1
                           }}
                         />

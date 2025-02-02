@@ -29,12 +29,22 @@ export const NeuronDetailDialog: React.FC<NeuronDetailDialogProps> = ({
   const activation = value;
   
   // Calculate incoming and outgoing connections
-  const incomingWeights = layer > 0 ? weights?.[layer - 1]?.[index] || [] : [];
+  const rawIncoming = layer > 0 ? weights?.[layer - 1]?.[index] : [];
+  const incomingWeights: number[] = layer > 0
+    ? (Array.isArray(rawIncoming) ? rawIncoming : [rawIncoming ?? 0])
+    : [];
   const outgoingWeights = weights?.[layer]?.map(n => n[index]) || [];
   
+  // Add outgoingGradients calculation:
+  const outgoingGradients: number[] = layer === (weights?.length || 0)
+    ? []
+    : (gradients?.[layer]?.map((row: number[]) => row[index]) || []);
+  
   // Calculate gradients if available
-  const incomingGradients = layer > 0 ? gradients?.[layer - 1]?.[index] || [] : [];
-  const outgoingGradients = gradients?.[layer]?.map(n => n[index]) || [];
+  const rawIncomingGrad = layer > 0 ? gradients?.[layer - 1]?.[index] : [];
+  const incomingGradients: number[] = layer > 0
+    ? (Array.isArray(rawIncomingGrad) ? rawIncomingGrad : [rawIncomingGrad ?? 0])
+    : [];
 
   return (
     <Dialog
@@ -85,7 +95,7 @@ export const NeuronDetailDialog: React.FC<NeuronDetailDialogProps> = ({
               <Typography variant="body2">
                 Average Incoming Weight: {
                   incomingWeights.length > 0 
-                    ? (incomingWeights.reduce((a, b) => a + b, 0) / incomingWeights.length).toFixed(4)
+                    ? (incomingWeights.reduce((a: number, b: number) => a + b, 0) / incomingWeights.length).toFixed(4)
                     : 'N/A'
                 }
               </Typography>
@@ -106,19 +116,25 @@ export const NeuronDetailDialog: React.FC<NeuronDetailDialogProps> = ({
               <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: '1fr 1fr' }}>
                 <Box>
                   <Typography variant="body2" gutterBottom>Incoming Gradients</Typography>
-                  {incomingGradients.map((gradient, idx) => (
-                    <Typography key={idx} variant="body2" color={gradient > 0 ? 'success.main' : 'error.main'}>
-                      Connection {idx + 1}: {gradient.toFixed(4)}
-                    </Typography>
-                  ))}
+                  {incomingGradients.map((gradient: number, idx: number) => {
+                      const gradVal = gradient ?? 0;
+                      return (
+                        <Typography key={idx} variant="body2" color={gradVal > 0 ? 'success.main' : 'error.main'}>
+                          Connection {idx + 1}: {gradVal.toFixed(4)}
+                        </Typography>
+                      );
+                  })}
                 </Box>
                 <Box>
                   <Typography variant="body2" gutterBottom>Outgoing Gradients</Typography>
-                  {outgoingGradients.map((gradient, idx) => (
-                    <Typography key={idx} variant="body2" color={gradient > 0 ? 'success.main' : 'error.main'}>
-                      Connection {idx + 1}: {gradient.toFixed(4)}
-                    </Typography>
-                  ))}
+                  {outgoingGradients.map((gradient: number, idx: number) => {
+                      const gradVal = gradient ?? 0;
+                      return (
+                        <Typography key={idx} variant="body2" color={gradVal > 0 ? 'success.main' : 'error.main'}>
+                          Connection {idx + 1}: {gradVal.toFixed(4)}
+                        </Typography>
+                      );
+                  })}
                 </Box>
               </Box>
             </Box>

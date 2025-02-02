@@ -563,6 +563,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         biases={biases}
         activations={activations}
         gradients={gradients}
+        dataset={dataset} // pass dataset to enable weather prediction logic
       />
     </Box>
   );
@@ -583,6 +584,24 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
             <g 
               key={`neuron-${layerIndex}-${neuronIndex}`}
               transform={`translate(${pos.x}, ${pos.y})`}
+              onClick={() => {
+                if (dataset === 'logicGates' || dataset === 'fitnessClassification') {
+                  if (layerIndex < layers.length - 1) {
+                    // For input and hidden neurons, show details of the next layer's neuron
+                    const targetLayer = layerIndex + 1;
+                    const targetIndex = neuronIndex < layers[targetLayer] ? neuronIndex : 0;
+                    const targetValue = activations?.[targetLayer]?.[targetIndex] || 0;
+                    setSelectedNeuron({ layer: targetLayer, index: targetIndex, value: targetValue });
+                  } else {
+                    // For output layer, keep self to compute correct incoming weights
+                    setSelectedNeuron({ layer: layerIndex, index: neuronIndex, value: activation });
+                  }
+                } else {
+                  // For weather model and others, use the clicked neuron
+                  setSelectedNeuron({ layer: layerIndex, index: neuronIndex, value: activation });
+                }
+                setShowNeuronDetail(true);
+              }}
             >
               {/* Neuron glow effect */}
               <defs>
@@ -839,6 +858,7 @@ export const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         biases={biases}
         activations={activations}
         gradients={gradients}
+        dataset={dataset} // pass dataset to enable weather prediction logic
       />
     </Box>
   );
