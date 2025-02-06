@@ -297,7 +297,7 @@ export default function NetworkPage() {
   const getNetworkArchitecture = (selectedDataset: string): number[] => {
     switch(selectedDataset) {
       case 'logicGates':
-        return [10, 8, 4, 2];
+        return [3, 8, 4, 2];
       case 'fitnessClassification':
         return [3, 3, 4, 3];
       case 'weatherPrediction':
