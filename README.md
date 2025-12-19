@@ -1,5 +1,7 @@
 # Visu-Net
 
+**Preview Website:** [nnv.chanakyachowdary.in](https://nnv.chanakyachowdary.in)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-4.9.5-blue.svg)](https://www.typescriptlang.org/)
@@ -11,7 +13,7 @@
   <p><strong>Interactive Neural Network Visualization Tool</strong></p>
 </div>
 
-A powerful Neural Network Visualization Tool built with React and TypeScript that helps visualize and understand neural network architectures, training processes, and performance metrics in real-time. Perfect for education, research, and deep learning exploration.
+A powerful Neural Network Visualization Tool built with React and TypeScript that helps visualize and understand neural network architectures, training processes, and performance metrics in real-time.
 
 ## 🌟 Features
 
