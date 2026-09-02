@@ -445,3 +445,7 @@ For more details about our dependencies' licenses, check the ADDITIONAL ATTRIBUT
 <div align="center">
   Made with ❤️ by the Visu-Net Team
 </div>
+
+---
+
+Built by **Chanakya Thotakura** — [chanakyachowdary.in](https://chanakyachowdary.in) · [Case study](https://chanakyachowdary.in/#/work/visu-net)
